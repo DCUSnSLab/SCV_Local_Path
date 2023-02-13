@@ -31,11 +31,13 @@ class Car_Follower():
         self.sub3D = rospy.Subscriber("/lidar3D", PointCloud2, self.callback3D)
         self.lidar_pub3D = rospy.Publisher("/refined_lidar3D", PointCloud2, queue_size=10)  # velodyne
         self.send = rospy.Publisher("/lp_ctrl", CtrlCmd, queue_size=1)
-        self.ALGO_FLAG = 2  # 1 : kdtree. 2 : dbscan
         self.pos = None
-
+        self.flag = False
         # object 출력용
         self.objs = list()  # for display to graph
+        self.steering = 0
+        self.velocity = 1
+        self.brake = 0
 
         # object 출력용 position과 size
         self.objsPos = list()
@@ -48,23 +50,10 @@ class Car_Follower():
             self.objsPos.append(pos)
             self.objsSize.append(size)
 
-    def kdtree(self, points):
-        kdt = KDTree(points, leaf_size=40)
-        # cluster_list = [[0 for j in range(0, )] for i in range(3)]
-        cluster_list = [0 for i in range(len(points))]
-        cluster = 1
-        for i in range(3):
-            cluster = cluster + 1
-            random_point = random.randrange(len(points))
-            # dist, ind = kdt.query(points[random_point:random_point+1], k=10)
-            ind = kdt.query_radius(points[random_point:random_point + 1], r=1)[0]
-            # print(ind)
-            for j in ind:
-                cluster_list[j] = cluster
-        self.clusterLabel = np.asarray(cluster_list)
 
     def dbscan(self, points):  # dbscan eps = 1.5, min_size = 60
-        dbscan = DBSCAN(eps=0.5, min_samples=10, algorithm='ball_tree').fit(points)
+        #조건들 = esp(기준점부터의 원의 반지름 거리) , min_samples(esp로 설정된 원 내부에 존재 해야할 점의 수)
+        dbscan = DBSCAN(eps=1, min_samples=20, algorithm='ball_tree').fit(points)
         self.clusterLabel = dbscan.labels_
 
     def callback3D(self, msg):
@@ -80,15 +69,16 @@ class Car_Follower():
         scan.data = msg.data
         scan.is_dense = msg.is_dense
 
-        # 좌표
         pc = ros_numpy.numpify(scan)
+        # 좌표
+
         points = np.zeros((pc.shape[0], 3))
 
         points[:, 0] = pc['x']
         points[:, 1] = pc['y']
         points[:, 2] = pc['z']
 
-        roi = {"x": [-5, 5], "y": [-5, 5], "z": [-0.69, 10]}  # z값 수정, X 값 수정으로 전,후방 범위 조절
+        roi = {"x": [-8, 8], "y": [-8, 8], "z": [3, 10]}  # z값 수정, X 값 수정으로 전,후방 범위 조절 z축 바닥 떄문에 -0.69 수정
 
         x_range = np.logical_and(points[:, 0] >= roi["x"][0], points[:, 0] <= roi["x"][1])
         y_range = np.logical_and(points[:, 1] >= roi["y"][0], points[:, 1] <= roi["y"][1])
@@ -111,25 +101,67 @@ class Car_Follower():
         print("정제 개수 \n", refined_xyaxis)
         '''
 
+        xyaxis = np.delete(points,[2],axis= 1)
+        re_xyaxis = np.delete(xyaxis, np.where(xyaxis == 0),axis=0)
+
         '''
-        re_xaxis, re_yaxis = 0 값 제외한 좌표 측 실제로 물체가 인식되는 라이다 값만 존재하는 1차원 np.array (기울기를 구하기 위해서)
-        '''
+        x,y 좌표 분리해서 출력 
         xaxis = np.delete(points, [1, 2], axis=1)
         yaxis = np.delete(points, [0, 2], axis=1)
-        re_xaxis= np.delete(xaxis,np.where(xaxis==0))
+        re_xaxis = np.delete(xaxis,np.where(xaxis==0))
         re_yaxis = np.delete(yaxis, np.where(yaxis == 0))
-        # print("정제된 x값\n", re_xaxis)
-        # print("정제된 y값", re_yaxis)
-        # print("x 크기",re_xaxis.size)
-        # print("y 크기", re_yaxis.size)
-        '''xy는 각 인덱스 별 (0,0)과 인덱스의 x,y좌표 기울기 계산 결과 저장
-        xypoint는 각 인덱스 별 원점(0,0)과 x,y좌표 사이의 거리'''
+        print("정제된 x값\n", re_xaxis)
+        print("정제된 y값", re_yaxis)
+        print("x 크기",re_xaxis.size)
+        print("y 크기", re_yaxis.size)
+        '''
+        #장애물 피하면 최대 최소 기울기 음수? 일듯
+        miny = min(re_xyaxis[:,1])
+        maxy = max(re_xyaxis[:,1])
+        minindex = np.where(re_xyaxis[:,1] == miny)
+        maxindex = np.where(re_xyaxis[:,1] == maxy)
+        min_xyaxis = re_xyaxis[minindex]
+        max_xyaxis = re_xyaxis[maxindex]
+        minlean = min_xyaxis[:, 1] / min_xyaxis[:, 0]
+        maxlean = max_xyaxis[:, 1] / max_xyaxis[:, 0]
+        # print("좌표 :", re_xyaxis)
+        # print("최소 값 ", miny)
+        # print("최소 값의 인덱스 및 좌표들 ", re_xyaxis[minindex])
+        # print("최대 값 ", maxy)
+        # print("최대 값의 인덱스 및 좌표들 ", re_xyaxis[maxindex])
 
-        """
-        xy=[]
-        xypoint=[]
-        
-        xypoint값을 기반으로 장애물 회피 동작을 구현 할려고 했던 잔재물
+        xy = list()
+        for i in range(re_xyaxis[:,1].size):
+            xy.append(math.sqrt((re_xyaxis[i][1] ** 2) + (re_xyaxis[i][0] ** 2)))
+        print("가장 가까운 점의 거리 ",min(xy))
+        print(" 최소 값 기울기 ", minlean)
+        print("최대 값 기울기 ", maxlean)
+
+        if -1 < minlean < 1 or -1 < maxlean < 1:
+            if min(xy) < 1.4:
+                self.velocity = 0
+                self.brake = 1
+            else:
+                self.brake = 0
+                self.velocity = 1
+                if self.flag == False:
+                    if abs(minlean) > abs(maxlean):
+                        self.steering = 90
+                        self.flag = True
+                        print("오른쪽 조건 만족 플레그 값", self.flag)
+                    elif abs(minlean) < abs(maxlean):
+                        self.steering = -90
+                        self.flag = True
+                        print("왼쪽 조건 만족 플레그 값", self.flag)
+        else:
+            self.steering = 0
+            self.flag = False
+
+        print("속력 :", self.velocity)
+        print("핸들 :", self.steering)
+        print("브레이크 :", self.brake)
+        '''
+        최소 최대 기울기 구하기 
         for i in range(re_xaxis.size and re_yaxis.size):
             xy.append(re_yaxis[i]/re_xaxis[i])
             xypoint.append(math.sqrt((re_xaxis[i]**2)+(re_yaxis[i]**2)))
@@ -140,20 +172,16 @@ class Car_Follower():
         print("최대 기울기 ", max(xy))
         print("최소 거리 ", min(xypoint))
         print("최대 거리 ", max(xypoint))
-        """
+        '''
 
-        steering = 20
-        # print(steering, center_dist, left_curv, right_curv)
-        velocity = 1
+
         send = CtrlCmd()
-        send.velocity = velocity
 
-        send.steering = steering
 
-        if self.ALGO_FLAG == 1:
-            self.kdtree(points)
-        elif self.ALGO_FLAG == 2:
-            self.dbscan(points)
+
+        '''
+        혜원이의 바인딩 박스 생성 코드 
+        self.dbscan(points)
 
         for i in range(1, max(self.clusterLabel)+1):
             tempobjPos = self.objsPos[i]
@@ -167,24 +195,29 @@ class Car_Follower():
             y_size = np.max(points[index, 1]) - np.min(points[index, 1])  # y_max 1.3
 
             # car size bounding box
-            carLength = 5 # 경차 : 3.6 소형 : 4.7 화물 차량 : 9
-            carHeight = 5 # 경차 : 2 소형 : 2 화물 차량 : 9
+            carLength = 100 # 경차 : 3.6 소형 : 4.7 화물 차량 : 9
+            carHeight = 100 # 경차 : 2 소형 : 2 화물 차량 : 9
             if (x_size <= carLength+1) and (y_size <= carHeight+1):
-                """전방에 물체가 감지되면 velocity(속력)을 0으로 변경하여 차량 긴급 정지"""
-                #send.velocity = 0
+                """전방에 물체가 감지되면 velocity(속력)을 10으로 """
+                send.velocity = 10
                 tempobjPos[0] = x
                 tempobjPos[1] = y
                 tempobjSize[0] = x_size
                 tempobjSize[1] = y_size
-                #print("%d : [%.2f, %.2f, %.2f, %.2f]" % (i, tempobjPos[0], tempobjPos[1], tempobjSize[0], tempobjSize[1]))
+                print("%d : [%.2f, %.2f, %.2f, %.2f]" % (i, tempobjPos[0], tempobjPos[1], tempobjSize[0], tempobjSize[1]))
             else:
-                send.velocity = 10
-
+                send.velocity = 0
+'''
 
         header = Header()
         header.frame_id = "velodyne"
         scan = point_cloud2.create_cloud_xyz32(header, points)
         scan.header.stamp = rospy.Time.now()
+
+        send.velocity = self.velocity
+        send.steering = self.steering
+        send.brake = self.brake
+        # send.accel = accel
         self.lidar_pub3D.publish(scan)
         self.send.publish(send)
 
