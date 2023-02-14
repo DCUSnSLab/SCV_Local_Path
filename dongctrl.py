@@ -50,7 +50,6 @@ class Car_Follower():
             self.objsPos.append(pos)
             self.objsSize.append(size)
 
-
     def dbscan(self, points):  # dbscan eps = 1.5, min_size = 60
         #조건들 = esp(기준점부터의 원의 반지름 거리) , min_samples(esp로 설정된 원 내부에 존재 해야할 점의 수)
         dbscan = DBSCAN(eps=1, min_samples=20, algorithm='ball_tree').fit(points)
@@ -70,7 +69,6 @@ class Car_Follower():
         scan.is_dense = msg.is_dense
 
         pc = ros_numpy.numpify(scan)
-        # 좌표
 
         points = np.zeros((pc.shape[0], 3))
 
@@ -78,7 +76,7 @@ class Car_Follower():
         points[:, 1] = pc['y']
         points[:, 2] = pc['z']
 
-        roi = {"x": [-8, 8], "y": [-8, 8], "z": [3, 10]}  # z값 수정, X 값 수정으로 전,후방 범위 조절 z축 바닥 떄문에 -0.69 수정
+        roi = {"x": [-5, 5], "y": [-5, 5], "z": [-0.5, 10]}  # z값 수정, X 값 수정으로 전,후방 범위 조절 z축 바닥 떄문에 -0.69 수정
 
         x_range = np.logical_and(points[:, 0] >= roi["x"][0], points[:, 0] <= roi["x"][1])
         y_range = np.logical_and(points[:, 1] >= roi["y"][0], points[:, 1] <= roi["y"][1])
@@ -115,7 +113,7 @@ class Car_Follower():
         print("x 크기",re_xaxis.size)
         print("y 크기", re_yaxis.size)
         '''
-        #장애물 피하면 최대 최소 기울기 음수? 일듯
+
         miny = min(re_xyaxis[:,1])
         maxy = max(re_xyaxis[:,1])
         minindex = np.where(re_xyaxis[:,1] == miny)
@@ -156,6 +154,7 @@ class Car_Follower():
         else:
             self.steering = 0
             self.flag = False
+            self.velocity = 1
 
         print("속력 :", self.velocity)
         print("핸들 :", self.steering)
