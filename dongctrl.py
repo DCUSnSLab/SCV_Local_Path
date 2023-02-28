@@ -35,25 +35,17 @@ class Car_Follower():
         self.steering = 0
         self.velocity = 0
         self.brake = 0
-        self.objsPos = list()
-        self.objsSize = list()
+        self.objsPos = np.empty((0,2),float)
+        self.objsSize = np.empty((0,2),float)
         self.clusterLabel =list()
 
     def dbscan(self, points):  # dbscan eps = 1.5, min_size = 60
         #조건들 = esp(기준점부터의 원의 반지름 거리) , min_samples(esp로 설정된 원 내부에 존재 해야할 점의 수)
-        """ algorithm='ball_tree' """
         dbscan = DBSCAN(eps=2, min_samples=2).fit(points)
         self.clusterLabel = dbscan.labels_
 
     def callback3D(self, msg):
 
-        numofobjs = 150
-
-        for i in range(numofobjs):
-            pos = [0, 0, 0]  # x, y, z
-            size = [0, 0, 0]  # w, h, depth
-            self.objsPos.append(pos)
-            self.objsSize.append(size)
 
         send = CtrlCmd()
         scan = PointCloud2()
@@ -90,9 +82,6 @@ class Car_Follower():
         self.dbscan(repoint)
 
         for i in range(0, max(self.clusterLabel) + 1):
-            box_cnt = list()
-            tempobjPos = self.objsPos[i]
-            tempobjSize = self.objsSize[i]
             #군집화로 객체가 분류된 배열의 가장 작은 값의 인덱스
             index = np.asarray(np.where(self.clusterLabel == i))
             # print(i, 'cluster 개수 : ', len(index[0]))
@@ -101,20 +90,12 @@ class Car_Follower():
             x_size = np.max(repoint[index, 0]) - np.min(repoint[index, 0])  # x_max 3
             y_size = np.max(repoint[index, 1]) - np.min(repoint[index, 1])  # y_max 1.3
 
-            # car size bounding box
-            carLength = 9  # 경차 : 3.6 소형 : 4.7 화물 차량 : 9
-            carHeight = 3  # .경차 : 2 소형 : 2 화물 차량 : 9
-            # box_cnt.append(i)
-            tempobjPos[0] = x
-            tempobjPos[1] = y
-            tempobjSize[0] = x_size
-            tempobjSize[1] = y_size
-            print("%d : [%.2f, %.2f, %.2f, %.2f]" % (i, tempobjPos[0], tempobjPos[1], tempobjSize[0], tempobjSize[1]))
+            if np.all(self.objsPos[:,0] != round(x,2)) and np.all(self.objsPos[:,1] != round(y,2)):
+                self.objsPos = np.append(self.objsPos,np.array([[round(x,2),round(y,2)]]),axis=0)
+                self.objsSize = np.append(self.objsSize, np.array([[round(x_size,2), round(y_size,2)]]), axis=0)
 
-        # points[:, 0] = x축 값 , points[:, 1] = y축 값 , points[:, 2] = z축 값
-        # z축 값 추출 1차원 배열로 재배열
-        # Zaxis=points[:,2].reshape(-1)
-
+        print("위치", self.objsPos)
+        print("크기", self.objsSize)
 
         xyaxis = np.delete(points,[2],axis= 1)
         re_xyaxis = np.delete(xyaxis, np.where(xyaxis == 0),axis=0)
