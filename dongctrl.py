@@ -1,7 +1,6 @@
 import pyqtgraph as pg
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QObject, Qt, QThread, QTimer
-from PyQt5.QtGui import *
 
 import time, random
 import rospy
@@ -29,34 +28,34 @@ from sklearn.linear_model import RANSACRegressor
 class Car_Follower():
     def __init__(self):
         self.sub3D = rospy.Subscriber("/lidar3D", PointCloud2, self.callback3D)
-        self.lidar_pub3D = rospy.Publisher("/refined_lidar3D", PointCloud2, queue_size=10)  # velodyne
+        self.lidar_pub3D = rospy.Publisher("/refined_lidar3D", PointCloud2, queue_size=1)  # velodyne
         self.send = rospy.Publisher("/lp_ctrl", CtrlCmd, queue_size=1)
         self.pos = None
         self.flag = False
-        # object 출력용
-        self.objs = list()  # for display to graph
         self.steering = 0
-        self.velocity = 1
+        self.velocity = 0
         self.brake = 0
-
-        # object 출력용 position과 size
         self.objsPos = list()
         self.objsSize = list()
+        self.clusterLabel =list()
+
+    def dbscan(self, points):  # dbscan eps = 1.5, min_size = 60
+        #조건들 = esp(기준점부터의 원의 반지름 거리) , min_samples(esp로 설정된 원 내부에 존재 해야할 점의 수)
+        """ algorithm='ball_tree' """
+        dbscan = DBSCAN(eps=2, min_samples=2).fit(points)
+        self.clusterLabel = dbscan.labels_
+
+    def callback3D(self, msg):
 
         numofobjs = 150
+
         for i in range(numofobjs):
             pos = [0, 0, 0]  # x, y, z
             size = [0, 0, 0]  # w, h, depth
             self.objsPos.append(pos)
             self.objsSize.append(size)
 
-    def dbscan(self, points):  # dbscan eps = 1.5, min_size = 60
-        #조건들 = esp(기준점부터의 원의 반지름 거리) , min_samples(esp로 설정된 원 내부에 존재 해야할 점의 수)
-        dbscan = DBSCAN(eps=1, min_samples=20, algorithm='ball_tree').fit(points)
-        self.clusterLabel = dbscan.labels_
-
-    def callback3D(self, msg):
-
+        send = CtrlCmd()
         scan = PointCloud2()
         scan.header = msg.header
         scan.height = msg.height
@@ -76,7 +75,8 @@ class Car_Follower():
         points[:, 1] = pc['y']
         points[:, 2] = pc['z']
 
-        roi = {"x": [-5, 5], "y": [-5, 5], "z": [-0.5, 10]}  # z값 수정, X 값 수정으로 전,후방 범위 조절 z축 바닥 떄문에 -0.69 수정
+        roi = {"x": [-20, 20], "y": [-20, 20], "z": [-0.44, 10]}  # z값 수정, X 값 수정으로 전,후방 범위 조절
+        #z축 현재 위치 0.62 -> 바닥에서 차량의 바퀴까지 0.18, 그 밑에 부분은 차량이 충분히 넘을 수 있을거라 가정
 
         x_range = np.logical_and(points[:, 0] >= roi["x"][0], points[:, 0] <= roi["x"][1])
         y_range = np.logical_and(points[:, 1] >= roi["y"][0], points[:, 1] <= roi["y"][1])
@@ -84,23 +84,41 @@ class Car_Follower():
 
         pass_through_filter = np.where(np.logical_and(x_range, np.logical_and(y_range, z_range)) == True)[0]
         points = points[pass_through_filter, :]
+
+        #dbscan속도 증진을 위해 0값 제거
+        repoint = np.delete(points, np.where(points[:,0] == 0, points[:,1] == 0, points[:,2] == 0), axis=0)
+        self.dbscan(repoint)
+
+        for i in range(0, max(self.clusterLabel) + 1):
+            box_cnt = list()
+            tempobjPos = self.objsPos[i]
+            tempobjSize = self.objsSize[i]
+            #군집화로 객체가 분류된 배열의 가장 작은 값의 인덱스
+            index = np.asarray(np.where(self.clusterLabel == i))
+            # print(i, 'cluster 개수 : ', len(index[0]))
+            x = np.min(repoint[index, 0])
+            y = np.min(repoint[index, 1])
+            x_size = np.max(repoint[index, 0]) - np.min(repoint[index, 0])  # x_max 3
+            y_size = np.max(repoint[index, 1]) - np.min(repoint[index, 1])  # y_max 1.3
+
+            # car size bounding box
+            carLength = 9  # 경차 : 3.6 소형 : 4.7 화물 차량 : 9
+            carHeight = 3  # .경차 : 2 소형 : 2 화물 차량 : 9
+            # box_cnt.append(i)
+            tempobjPos[0] = x
+            tempobjPos[1] = y
+            tempobjSize[0] = x_size
+            tempobjSize[1] = y_size
+            print("%d : [%.2f, %.2f, %.2f, %.2f]" % (i, tempobjPos[0], tempobjPos[1], tempobjSize[0], tempobjSize[1]))
+
         # points[:, 0] = x축 값 , points[:, 1] = y축 값 , points[:, 2] = z축 값
-        #z축 값 추출 1차원 배열로 재배열
+        # z축 값 추출 1차원 배열로 재배열
         # Zaxis=points[:,2].reshape(-1)
 
-        '''
-        x,y 축 만 추출 후 0값을 inf로 바꾸는 코드 (23.01.08) 추후 의미없으면 삭제 예정 
-        xyaxis = np.delete(points, 2, axis=1)
-        print("자료형 : ", type(xyaxis))
-        print("개수 \n",xyaxis)
-        # 0값을 inf처리
-        refined_xyaxis = np.where(xyaxis == 0, float("inf"), xyaxis)
-        print("정제 자료형 : ", type(refined_xyaxis))
-        print("정제 개수 \n", refined_xyaxis)
-        '''
 
         xyaxis = np.delete(points,[2],axis= 1)
         re_xyaxis = np.delete(xyaxis, np.where(xyaxis == 0),axis=0)
+
 
         '''
         x,y 좌표 분리해서 출력 
@@ -113,7 +131,8 @@ class Car_Follower():
         print("x 크기",re_xaxis.size)
         print("y 크기", re_yaxis.size)
         '''
-
+        """
+        #초기 장애물 회피 코드 23.02.25
         miny = min(re_xyaxis[:,1])
         maxy = max(re_xyaxis[:,1])
         minindex = np.where(re_xyaxis[:,1] == miny)
@@ -122,11 +141,12 @@ class Car_Follower():
         max_xyaxis = re_xyaxis[maxindex]
         minlean = min_xyaxis[:, 1] / min_xyaxis[:, 0]
         maxlean = max_xyaxis[:, 1] / max_xyaxis[:, 0]
-        # print("좌표 :", re_xyaxis)
-        # print("최소 값 ", miny)
-        # print("최소 값의 인덱스 및 좌표들 ", re_xyaxis[minindex])
-        # print("최대 값 ", maxy)
-        # print("최대 값의 인덱스 및 좌표들 ", re_xyaxis[maxindex])
+
+        print("좌표 :", re_xyaxis)
+        print("최소 값 ", miny)
+        print("최소 값의 인덱스 및 좌표들 ", re_xyaxis[minindex])
+        print("최대 값 ", maxy)
+        print("최대 값의 인덱스 및 좌표들 ", re_xyaxis[maxindex])
 
         xy = list()
         for i in range(re_xyaxis[:,1].size):
@@ -134,14 +154,15 @@ class Car_Follower():
         print("가장 가까운 점의 거리 ",min(xy))
         print(" 최소 값 기울기 ", minlean)
         print("최대 값 기울기 ", maxlean)
-
+        
+        
         if -1 < minlean < 1 or -1 < maxlean < 1:
             if min(xy) < 1.4:
                 self.velocity = 0
                 self.brake = 1
             else:
                 self.brake = 0
-                self.velocity = 1
+                self.velocity = 20
                 if self.flag == False:
                     if abs(minlean) > abs(maxlean):
                         self.steering = 90
@@ -149,16 +170,13 @@ class Car_Follower():
                         print("오른쪽 조건 만족 플레그 값", self.flag)
                     elif abs(minlean) < abs(maxlean):
                         self.steering = -90
-                        self.flag = True
                         print("왼쪽 조건 만족 플레그 값", self.flag)
         else:
             self.steering = 0
             self.flag = False
-            self.velocity = 1
+            self.velocity = 20
 
-        print("속력 :", self.velocity)
-        print("핸들 :", self.steering)
-        print("브레이크 :", self.brake)
+        """
         '''
         최소 최대 기울기 구하기 
         for i in range(re_xaxis.size and re_yaxis.size):
@@ -173,49 +191,16 @@ class Car_Follower():
         print("최대 거리 ", max(xypoint))
         '''
 
-
-        send = CtrlCmd()
-
-
-
-        '''
-        혜원이의 바인딩 박스 생성 코드 
-        self.dbscan(points)
-
-        for i in range(1, max(self.clusterLabel)+1):
-            tempobjPos = self.objsPos[i]
-            tempobjSize = self.objsSize[i]
-
-            index = np.asarray(np.where(self.clusterLabel == i))
-            # print(i, 'cluster 개수 : ', len(index[0]))
-            x = np.min(points[index, 0])
-            y = np.min(points[index, 1])
-            x_size = np.max(points[index, 0]) - np.min(points[index, 0])  # x_max 3
-            y_size = np.max(points[index, 1]) - np.min(points[index, 1])  # y_max 1.3
-
-            # car size bounding box
-            carLength = 100 # 경차 : 3.6 소형 : 4.7 화물 차량 : 9
-            carHeight = 100 # 경차 : 2 소형 : 2 화물 차량 : 9
-            if (x_size <= carLength+1) and (y_size <= carHeight+1):
-                """전방에 물체가 감지되면 velocity(속력)을 10으로 """
-                send.velocity = 10
-                tempobjPos[0] = x
-                tempobjPos[1] = y
-                tempobjSize[0] = x_size
-                tempobjSize[1] = y_size
-                print("%d : [%.2f, %.2f, %.2f, %.2f]" % (i, tempobjPos[0], tempobjPos[1], tempobjSize[0], tempobjSize[1]))
-            else:
-                send.velocity = 0
-'''
-
         header = Header()
         header.frame_id = "velodyne"
         scan = point_cloud2.create_cloud_xyz32(header, points)
         scan.header.stamp = rospy.Time.now()
 
+
         send.velocity = self.velocity
         send.steering = self.steering
-        send.brake = self.brake
+        send.brake = 0
+
         # send.accel = accel
         self.lidar_pub3D.publish(scan)
         self.send.publish(send)
@@ -224,6 +209,8 @@ class Car_Follower():
 if __name__ == '__main__':
     mct = moraiCtrl()
     Car_Follower()
-    #mct = hunterCtrl()
+    # mct = hunterCtrl()
     mct.runCtrl()
+
+
 
