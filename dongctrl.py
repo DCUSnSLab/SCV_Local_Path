@@ -35,8 +35,11 @@ class Car_Follower():
         self.steering = 0
         self.velocity = 0
         self.brake = 0
-        self.objsPos = np.empty((0,2),float)
+        # self.objsPos = np.empty((0,2),float)
+        # self.objsSize = np.empty((0,2),float)
+        self.objsPos = np.empty((0,6),float)
         self.objsSize = np.empty((0,2),float)
+        self.direction = 0
         self.clusterLabel =list()
 
     def dbscan(self, points):  # dbscan eps = 1.5, min_size = 60
@@ -45,7 +48,6 @@ class Car_Follower():
         self.clusterLabel = dbscan.labels_
 
     def callback3D(self, msg):
-
 
         send = CtrlCmd()
         scan = PointCloud2()
@@ -60,14 +62,13 @@ class Car_Follower():
         scan.is_dense = msg.is_dense
 
         pc = ros_numpy.numpify(scan)
-
         points = np.zeros((pc.shape[0], 3))
-
+        # if all(pc):
         points[:, 0] = pc['x']
         points[:, 1] = pc['y']
         points[:, 2] = pc['z']
 
-        roi = {"x": [-20, 20], "y": [-20, 20], "z": [-0.44, 10]}  # z값 수정, X 값 수정으로 전,후방 범위 조절
+        roi = {"x": [0, 10], "y": [-1, 1], "z": [-0.44, 10]}  # z값 수정, X 값 수정으로 전,후방 범위 조절
         #z축 현재 위치 0.62 -> 바닥에서 차량의 바퀴까지 0.18, 그 밑에 부분은 차량이 충분히 넘을 수 있을거라 가정
 
         x_range = np.logical_and(points[:, 0] >= roi["x"][0], points[:, 0] <= roi["x"][1])
@@ -77,30 +78,50 @@ class Car_Follower():
         pass_through_filter = np.where(np.logical_and(x_range, np.logical_and(y_range, z_range)) == True)[0]
         points = points[pass_through_filter, :]
 
+        if np.any(points !=0):
         #dbscan속도 증진을 위해 0값 제거
-        repoint = np.delete(points, np.where(points[:,0] == 0, points[:,1] == 0, points[:,2] == 0), axis=0)
-        self.dbscan(repoint)
-
-        for i in range(0, max(self.clusterLabel) + 1):
-            #군집화로 객체가 분류된 배열의 가장 작은 값의 인덱스
-            index = np.asarray(np.where(self.clusterLabel == i))
-            # print(i, 'cluster 개수 : ', len(index[0]))
-            x = np.min(repoint[index, 0])
-            y = np.min(repoint[index, 1])
-            x_size = np.max(repoint[index, 0]) - np.min(repoint[index, 0])  # x_max 3
-            y_size = np.max(repoint[index, 1]) - np.min(repoint[index, 1])  # y_max 1.3
-
-            if np.all(self.objsPos[:,0] != round(x,2)) and np.all(self.objsPos[:,1] != round(y,2)):
-                self.objsPos = np.append(self.objsPos,np.array([[round(x,2),round(y,2)]]),axis=0)
-                self.objsSize = np.append(self.objsSize, np.array([[round(x_size,2), round(y_size,2)]]), axis=0)
-
-        print("위치", self.objsPos)
-        print("크기", self.objsSize)
-
-        xyaxis = np.delete(points,[2],axis= 1)
-        re_xyaxis = np.delete(xyaxis, np.where(xyaxis == 0),axis=0)
-
-
+            repoint = np.delete(points, np.where(points[:,0] == 0, points[:,1] == 0, points[:,2] == 0), axis=0)
+            self.dbscan(repoint)
+            self.velocity = 10
+            for i in range(0, max(self.clusterLabel) + 1):
+                #군집화로 객체가 분류된 배열의 가장 작은 값의 인덱스
+                index = np.asarray(np.where(self.clusterLabel == i))
+                # print(i, 'cluster 개수 : ', len(index[0]))
+                x_min = np.min(repoint[index, 0])
+                y_min = np.min(repoint[index, 1])
+                x_max = np.max(repoint[index, 0])
+                y_max = np.max(repoint[index, 1])
+                x_size = np.max(repoint[index, 0]) - np.min(repoint[index, 0])  # x_max 3
+                y_size = np.max(repoint[index, 1]) - np.min(repoint[index, 1])  # y_max 1.3
+                x_mid = (x_min+x_max)/2
+                y_mid = (y_min+y_max)/2
+                # self.objsPos = np.append(self.objsPos, np.array([[x_min, y_min, x_max, y_max, x_mid, y_mid]]), axis=0)
+                # self.objsSize = np.append(self.objsSize, np.array([[x_size, y_size]]), axis=0)
+                # print(i,"번쨰","x_min: ", round(x_min,2),end=", ")
+                # print("y_min: ", round(y_min,2), end=", ")
+                # print("x_size: ", round(x_size,2), end=", ")
+                # print("y_size: ", round(y_size,2),end=", ")
+                # print("x_max: ", round(x_max, 2), end=", ")
+                # print("y_max: ", round(y_max, 2), end=", ")
+                # print("x_mid: ", round(x_mid, 2), end=", ")
+                # print("y_mid: ", round(y_mid, 2))
+                if points[:,1].size != 0:
+                    if min(repoint[:,0]) < 1:
+                        self.velocity = 0
+                    elif round(abs(x_max),2) < round(abs(x_min),2):
+                        self.steering = self.steering + 0.7
+                    elif round(abs(x_max),2) > round(abs(x_min),2):
+                        self.steering = self.steering - 0.7
+                    else:
+                        self.steering = 0
+                        self.velocity = 0
+        else:
+            if self.steering != 0 and self.steering > 0:
+                self.steering = self.steering - 0.7
+            elif self.steering != 0 and self.steering < 0:
+                self.steering = self.steering + 0.7
+            else:
+                self.velocity = 10
         '''
         x,y 좌표 분리해서 출력 
         xaxis = np.delete(points, [1, 2], axis=1)
@@ -177,10 +198,8 @@ class Car_Follower():
         scan = point_cloud2.create_cloud_xyz32(header, points)
         scan.header.stamp = rospy.Time.now()
 
-
         send.velocity = self.velocity
         send.steering = self.steering
-        send.brake = 0
 
         # send.accel = accel
         self.lidar_pub3D.publish(scan)
@@ -192,6 +211,3 @@ if __name__ == '__main__':
     Car_Follower()
     # mct = hunterCtrl()
     mct.runCtrl()
-
-
-
