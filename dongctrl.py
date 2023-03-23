@@ -78,7 +78,7 @@ class Car_Follower():
         pass_through_filter = np.where(np.logical_and(x_range, np.logical_and(y_range, z_range)) == True)[0]
         points = points[pass_through_filter, :]
 
-        if np.any(points !=0):
+        if np.any(points != 0):
         #dbscan속도 증진을 위해 0값 제거
             repoint = np.delete(points, np.where(points[:,0] == 0, points[:,1] == 0, points[:,2] == 0), axis=0)
             self.dbscan(repoint)
@@ -106,22 +106,29 @@ class Car_Follower():
                 # print("x_mid: ", round(x_mid, 2), end=", ")
                 # print("y_mid: ", round(y_mid, 2))
                 if points[:,1].size != 0:
-                    if min(repoint[:,0]) < 1:
+                    if min(repoint[:,0]) < 1.5:
                         self.velocity = 0
                     elif round(abs(x_max),2) < round(abs(x_min),2):
+                        print("장애물 있을때 오른쪽")
                         self.steering = self.steering + 0.7
                     elif round(abs(x_max),2) > round(abs(x_min),2):
+                        print("장애물 있을때 왼쪽")
                         self.steering = self.steering - 0.7
                     else:
-                        self.steering = 0
-                        self.velocity = 0
+                        pass
+                        # self.velocity = 0
         else:
-            if self.steering != 0 and self.steering > 0:
+            if round(self.steering) != 0 and round(self.steering) > 0:
+                print("장애물 없을때 왼쪽으로 전진하고있으면 오른쪽으로 바퀴 각도  조정 ")
                 self.steering = self.steering - 0.7
-            elif self.steering != 0 and self.steering < 0:
+            elif round(self.steering) != 0 and round(self.steering) < 0:
+                print("장애물 없을때 오른쪽")
                 self.steering = self.steering + 0.7
             else:
+                self.steering = 0
                 self.velocity = 10
+
+
         '''
         x,y 좌표 분리해서 출력 
         xaxis = np.delete(points, [1, 2], axis=1)
