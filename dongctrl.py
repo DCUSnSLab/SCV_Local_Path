@@ -44,7 +44,7 @@ class Car_Follower():
 
     def dbscan(self, points):  # dbscan eps = 1.5, min_size = 60
         #조건들 = esp(기준점부터의 원의 반지름 거리) , min_samples(esp로 설정된 원 내부에 존재 해야할 점의 수)
-        dbscan = DBSCAN(eps=2, min_samples=2).fit(points)
+        dbscan = DBSCAN(eps=1, min_samples=2).fit(points)
         self.clusterLabel = dbscan.labels_
 
     def callback3D(self, msg):
@@ -62,13 +62,18 @@ class Car_Follower():
         scan.is_dense = msg.is_dense
 
         pc = ros_numpy.numpify(scan)
+        # print("개수", pc.size)
         points = np.zeros((pc.shape[0], 3))
+        start = time.time()
+        self.dbscan(points)
+        end = time.time()
+        print(end - start)
         # if all(pc):
         points[:, 0] = pc['x']
         points[:, 1] = pc['y']
         points[:, 2] = pc['z']
 
-        roi = {"x": [0, 10], "y": [-1, 1], "z": [-0.44, 10]}  # z값 수정, X 값 수정으로 전,후방 범위 조절
+        roi = {"x": [-100, 100], "y": [-100, 100], "z": [-0.44, 30]}  # z값 수정, X 값 수정으로 전,후방 범위 조절
         #z축 현재 위치 0.62 -> 바닥에서 차량의 바퀴까지 0.18, 그 밑에 부분은 차량이 충분히 넘을 수 있을거라 가정
 
         x_range = np.logical_and(points[:, 0] >= roi["x"][0], points[:, 0] <= roi["x"][1])
@@ -81,7 +86,10 @@ class Car_Follower():
         if np.any(points != 0):
         #dbscan속도 증진을 위해 0값 제거
             repoint = np.delete(points, np.where(points[:,0] == 0, points[:,1] == 0, points[:,2] == 0), axis=0)
+            start = time.time()
             self.dbscan(repoint)
+            end = time.time()
+            # print(end-start)
             self.velocity = 10
             for i in range(0, max(self.clusterLabel) + 1):
                 #군집화로 객체가 분류된 배열의 가장 작은 값의 인덱스
@@ -109,20 +117,20 @@ class Car_Follower():
                     if min(repoint[:,0]) < 1.5:
                         self.velocity = 0
                     elif round(abs(x_max),2) < round(abs(x_min),2):
-                        print("장애물 있을때 오른쪽")
+                        # print("장애물 있을때 오른쪽")
                         self.steering = self.steering + 0.7
                     elif round(abs(x_max),2) > round(abs(x_min),2):
-                        print("장애물 있을때 왼쪽")
+                        # print("장애물 있을때 왼쪽")
                         self.steering = self.steering - 0.7
                     else:
                         pass
                         # self.velocity = 0
         else:
             if round(self.steering) != 0 and round(self.steering) > 0:
-                print("장애물 없을때 왼쪽으로 전진하고있으면 오른쪽으로 바퀴 각도  조정 ")
+                # print("장애물 없을때 왼쪽으로 전진하고있으면 오른쪽으로 바퀴 각도  조정 ")
                 self.steering = self.steering - 0.7
             elif round(self.steering) != 0 and round(self.steering) < 0:
-                print("장애물 없을때 오른쪽")
+                # print("장애물 없을때 오른쪽")
                 self.steering = self.steering + 0.7
             else:
                 self.steering = 0
