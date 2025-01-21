@@ -247,7 +247,7 @@ class mppiControllerNode():
         # Generate a action message
         goal = MoveBaseGoal()
 
-        goal.target_pose.header.frame_id = 'gps_utm'
+        goal.target_pose.header.frame_id = 'map'
         goal.target_pose.pose.position.x = data.pose.position.x
         goal.target_pose.pose.position.y = data.pose.position.y
 
