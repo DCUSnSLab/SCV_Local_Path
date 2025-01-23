@@ -6,7 +6,7 @@
     <arg name="vlp_laser" default="true" /> 
     <!-- \param "without_heading" to navigate without taking into account the heading of the robot, as our Jackal is equipped with Velodyne VLP-16 LiDaR -->
     
-    <arg name="without_heading" default="true" />
+    <arg name="without_heading" default="false" />
 
     <!-- Launch the 2D costmap node -->
     <include file="$(find mppi_control)/launch/costmap_launcher.launch" />
@@ -18,11 +18,11 @@
     </include>
   
     <!-- Launch the robot in Rviz with the specified world   --> 
-    <!--
+
     <include file="$(find jackal_viz)/launch/view_robot.launch">
       <arg name="config" default="mppi_costmap_sim" />
     </include> 
-    -->
+
     <!-- Set the transformation between map (i.e., world) frame (that is related to ground_truth/odom topic) and base_link --> 
     <!-- <node name="jackal_tf" pkg="mppi_control" type="tf_transform.py" /> -->
   </launch>
