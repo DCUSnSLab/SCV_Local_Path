@@ -1,0 +1,19 @@
+local_costmap:
+   global_frame: map 
+   robot_base_frame: ego_vehicle
+   update_frequency: 10.0
+   publish_frequency: 10.0
+   width: 50.0
+   height: 50.0
+   resolution: 0.05
+   #static_map: false
+   rolling_window: true
+   always_send_full_costmap: true
+   # Footprint 설정
+   footprint: [[0.9, 0.65],   # 앞쪽 오른쪽 코너
+         [0.9, -0.65],  # 앞쪽 왼쪽 코너 
+         [-0.9, -0.65], # 뒤쪽 왼쪽 코너
+         [-0.9, 0.65]]   # 뒤쪽 오른쪽 코너 
+   footprint_padding: 0.02
+
+
