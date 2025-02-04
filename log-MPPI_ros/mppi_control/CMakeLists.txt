@@ -12,11 +12,11 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_python_setup()
 
 ## Generate added messages and services with any dependencies listed here
-generate_messages(
-   DEPENDENCIES
-   geometry_msgs
-   std_msgs	
-)
+##generate_messages(
+##   DEPENDENCIES
+##   geometry_msgs
+##   std_msgs	
+##)
 
 catkin_package(
   CATKIN_DEPENDS geometry_msgs roscpp rospy std_msgs
