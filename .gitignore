@@ -1,0 +1,4 @@
+log-MPPI_ros/mppi_control/results/*
+*.pcd
+*.pyc
+**/__pycache__/

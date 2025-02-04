@@ -1,0 +1,21 @@
+<launch>
+  <node pkg="map_server" type="map_server" name="map_server" args="$(find your_map_package)/map/your_map.yaml"/>
+
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
+    <param name="publish_frequency" type="double" value="50.0" />
+  </node>
+
+    <node pkg="rviz" type="rviz" name="rviz" required="true"
+          args="-d $(find your_navigation_package)/rviz/navigation.rviz"/>
+
+  <include file="$(find amcl)/examples/amcl_diff.launch" />
+
+  <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+    <rosparam file="$(find your_navigation_package)/config/costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find your_navigation_package)/config/costmap_common_params.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find your_navigation_package)/config/local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find your_navigation_package)/config/global_costmap_params.yaml" command="load" />
+    <rosparam file="$(find your_navigation_package)/config/base_local_planner_params.yaml" command="load" />
+    <rosparam file="$(find your_navigation_package)/config/teb_local_planner_params.yaml" command="load" /> <param name="base_local_planner" value="TebLocalPlannerROS" />
+  </node>
+</launch>

@@ -1,0 +1,98 @@
+TebLocalPlannerROS:
+
+  odom_topic: odom/coordinate  # Odometry 데이터를 구독할 topic 이름입니다.
+
+  # Trajectory
+  teb_autosize: True           # TEB의 시간 단계 수를 자동으로 조정할지 여부.
+  dt_ref: 0.3                  # 기준 시간 간격 (초), TEB의 시간 분해능을 결정.
+  dt_hysteresis: 0.1          # 시간 간격 조정 시 사용되는 히스테리시스 값.
+  max_samples: 5             # TEB 생성에 필요한 최대 샘플 수.
+  global_plan_overwrite_orientation: True  # 글로벌 계획의 방향을 TEB 방향으로 덮어쓸지 여부.
+  allow_init_with_backwards_motion: False   # 초기화 시 후진 동작을 허용할지 여부.
+  max_global_plan_lookahead_dist: 10.0      # 글로벌 경로를 따라갈 최대 거리 (단위: m).
+  global_plan_viapoint_sep: 5.0            # viapoint 간의 최소 거리 (단위: m).
+  global_plan_prune_distance: 5          # 로봇 위치에서 멀리 떨어진 글로벌 계획 포인트를 제거할 거리 (단위: m).
+  exact_arc_length: False                  # 곡선 길이를 정확히 계산할지 여부.
+  feasibility_check_no_poses: 3            # 실행 가능성 검사를 수행할 최대 포즈 수.
+  publish_feedback: False                  # TEB 피드백 정보를 퍼블리시할지 여부.
+
+  # Robot (ERP42 기준)
+  max_vel_x: 1.5              # ERP42의 최대 전진 속도 (단위: m/s).
+  max_vel_x_backwards: 0.7    # ERP42의 최대 후진 속도 (단위: m/s).
+  max_vel_y: 0.0              # 횡방향 속도는 0으로 설정 (카라형 로봇에서는 사용하지 않음).
+  max_vel_theta: 0.4          # 최대 각속도 (단위: rad/s).
+  acc_lim_x: 1.0              # 최대 선속도 가속도 (단위: m/s^2).
+  acc_lim_theta: 1.0          # 최대 각속도 가속도 (단위: rad/s^2).
+
+  # Car-like robot parameters
+  min_turning_radius: 2.0      # ERP42의 최소 회전 반경 (단위: m).
+  wheelbase: 0.7              # ERP42의 휠베이스, 앞/뒤 바퀴 간 거리 (단위: m).
+  cmd_angle_instead_rotvel: True  # 회전 속도 대신 조향 각도를 명령으로 사용할지 여부.
+
+  # Footprint Model
+  footprint_model:
+    type: "polygon"           # 로봇 발자국(footprint) 형태를 다각형으로 설정.
+    vertices:
+      [
+        [0.9, 0.65],   # 앞쪽 오른쪽 코너
+        [0.9, -0.65],  # 앞쪽 왼쪽 코너 
+        [-0.9, -0.65], # 뒤쪽 왼쪽 코너
+        [-0.9, 0.65]   # 뒤쪽 오른쪽 코너 
+      ]                # ERP42의 크기를 반영한 네모난 footprint.
+
+  # Goal Tolerance
+  xy_goal_tolerance: 0.2       # 목표 지점에서 허용 XY 거리 오차 (단위: m).
+  yaw_goal_tolerance: 0.1      # 목표 지점에서 허용 Yaw 오차 (단위: rad).
+  free_goal_vel: False         # 목표 지점에서 속도 제약 해제 여부.
+  complete_global_plan: True   # 글로벌 계획 전체를 따를지 여부.
+
+  # Obstacles
+  min_obstacle_dist: 0.6       # 장애물과 로봇 간 최소 거리 (단위: m).
+  inflation_dist: 0.5          # 장애물 주변의 인플레이션 거리 (단위: m).
+  include_costmap_obstacles: True  # Costmap 장애물을 포함할지 여부.
+  costmap_obstacles_behind_robot_dist: 1.0  # 로봇 뒤쪽 장애물을 고려할 거리 (단위: m).
+  obstacle_poses_affected: 10  # 장애물의 영향을 받을 포즈 수.
+
+  dynamic_obstacle_inflation_dist: 0.8  # 동적 장애물 주변 인플레이션 거리 (단위: m).
+  include_dynamic_obstacles: True      # 동적 장애물을 고려할지 여부.
+
+  costmap_converter_plugin: "costmap converter"         # Costmap 변환기 플러그인 이름.
+  costmap_converter_spin_thread: True  # 변환기 스레드를 사용할지 여부.
+  costmap_converter_rate: 10            # 변환기 업데이트 주기 (단위: Hz).
+
+  # Optimization
+  no_inner_iterations: 3              # 최적화 시 내부 반복 횟수.
+  no_outer_iterations: 2              # 최적화 시 외부 반복 횟수.
+  optimization_activate: True         # 최적화 활성화 여부.
+  optimization_verbose: False         # 최적화 디버깅 정보 출력 여부.
+  penalty_epsilon: 0.1                # 벌칙 함수의 수렴 기준.
+  obstacle_cost_exponent: 3           # 장애물 비용 지수.
+
+  weight_max_vel_x: 2                 # 선속도 최대값에 대한 가중치.
+  weight_max_vel_theta: 1             # 각속도 최대값에 대한 가중치.
+  weight_acc_lim_x: 1                 # 선속도 가속도 제한에 대한 가중치.
+  weight_acc_lim_theta: 1             # 각속도 가속도 제한에 대한 가중치.
+  weight_kinematics_nh: 1000          # 비홀로노믹 제약에 대한 가중치.
+  weight_kinematics_forward_drive: 1  # 전진 주행 선호 가중치.
+  weight_kinematics_turning_radius: 1 # 회전 반경 제약 가중치.
+  weight_optimaltime: 1               # 최적화 시간에 대한 가중치.
+  weight_obstacle: 50                 # 장애물 회피 가중치.
+  weight_viapoint: 1                  # viapoint 가중치.
+  weight_adapt_factor: 2              # 가중치 조정 계수.
+
+  # Homotopy Class Planner
+  enable_homotopy_class_planning: False  # Homotopy Class Planning 활성화 여부.
+  enable_multithreading: False           # 멀티스레드 활성화 여부.
+  max_number_classes: 3                 # 허용되는 최대 Homotopy 클래스 수.
+  selection_cost_hysteresis: 1.0        # 선택 비용 히스테리시스 계수.
+  selection_prefer_initial_plan: 0.95   # 초기 계획 선호도.
+  selection_obst_cost_scale: 1.0        # 장애물 비용 스케일링.
+
+  roadmap_graph_no_samples: 10          # 로드맵 그래프 샘플 수.
+  roadmap_graph_area_width: 3.0         # 로드맵 그래프 샘플 영역 너비 (단위: m).
+  roadmap_graph_area_length_scale: 1.0  # 로드맵 그래프 길이 스케일링.
+
+  # Recovery
+  shrink_horizon_backup: True          # 실패 시 경로 수축 활성화 여부.
+  shrink_horizon_min_duration: 10      # 경로 수축 최소 지속 시간 (초).
+  oscillation_recovery: True           # 진동 복구 활성화 여부.
