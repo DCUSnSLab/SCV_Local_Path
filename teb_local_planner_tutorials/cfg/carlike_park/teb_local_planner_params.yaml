@@ -10,7 +10,7 @@ TebLocalPlannerROS:
   global_plan_overwrite_orientation: True  # 글로벌 계획의 방향을 TEB 방향으로 덮어쓸지 여부.
   allow_init_with_backwards_motion: False   # 초기화 시 후진 동작을 허용할지 여부.
   max_global_plan_lookahead_dist: 10.0      # 글로벌 경로를 따라갈 최대 거리 (단위: m).
-  global_plan_viapoint_sep: 5.0            # viapoint 간의 최소 거리 (단위: m).
+  global_plan_viapoint_sep: -0.1            # viapoint 간의 최소 거리 (단위: m).
   global_plan_prune_distance: 5          # 로봇 위치에서 멀리 떨어진 글로벌 계획 포인트를 제거할 거리 (단위: m).
   exact_arc_length: False                  # 곡선 길이를 정확히 계산할지 여부.
   feasibility_check_no_poses: 3            # 실행 가능성 검사를 수행할 최대 포즈 수.
