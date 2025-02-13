@@ -10,10 +10,11 @@ local_costmap:
    rolling_window: true
    always_send_full_costmap: true
    # Footprint 설정
-   footprint: [[0.9, 0.65],   # 앞쪽 오른쪽 코너
-         [0.9, -0.65],  # 앞쪽 왼쪽 코너 
-         [-0.9, -0.65], # 뒤쪽 왼쪽 코너
-         [-0.9, 0.65]]   # 뒤쪽 오른쪽 코너 
+   footprint: [
+      [1.025, 0.5],   # 앞쪽 오른쪽 코너
+      [1.025, -0.5],  # 앞쪽 왼쪽 코너
+      [-1.025, -0.5], # 뒤쪽 왼쪽 코너
+      [-1.025, 0.5]]   # 뒤쪽 오른쪽 코너
    footprint_padding: 0.02
 
 

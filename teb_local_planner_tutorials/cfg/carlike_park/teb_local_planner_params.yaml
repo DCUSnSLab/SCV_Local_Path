@@ -9,7 +9,7 @@ TebLocalPlannerROS:
   max_samples: 5             # TEB 생성에 필요한 최대 샘플 수.
   global_plan_overwrite_orientation: True  # 글로벌 계획의 방향을 TEB 방향으로 덮어쓸지 여부.
   allow_init_with_backwards_motion: False   # 초기화 시 후진 동작을 허용할지 여부.
-  max_global_plan_lookahead_dist: 10.0      # 글로벌 경로를 따라갈 최대 거리 (단위: m).
+  max_global_plan_lookahead_dist: 200.0      # 글로벌 경로를 따라갈 최대 거리 (단위: m).
   global_plan_viapoint_sep: -0.1            # viapoint 간의 최소 거리 (단위: m).
   global_plan_prune_distance: 5          # 로봇 위치에서 멀리 떨어진 글로벌 계획 포인트를 제거할 거리 (단위: m).
   exact_arc_length: False                  # 곡선 길이를 정확히 계산할지 여부.
@@ -17,12 +17,12 @@ TebLocalPlannerROS:
   publish_feedback: False                  # TEB 피드백 정보를 퍼블리시할지 여부.
 
   # Robot (ERP42 기준)
-  max_vel_x: 1.5              # ERP42의 최대 전진 속도 (단위: m/s).
-  max_vel_x_backwards: 0.7    # ERP42의 최대 후진 속도 (단위: m/s).
+  max_vel_x: 0.8              # ERP42의 최대 전진 속도 (단위: m/s).
+  max_vel_x_backwards: 0.4    # ERP42의 최대 후진 속도 (단위: m/s).
   max_vel_y: 0.0              # 횡방향 속도는 0으로 설정 (카라형 로봇에서는 사용하지 않음).
-  max_vel_theta: 0.4          # 최대 각속도 (단위: rad/s).
-  acc_lim_x: 1.0              # 최대 선속도 가속도 (단위: m/s^2).
-  acc_lim_theta: 1.0          # 최대 각속도 가속도 (단위: rad/s^2).
+  max_vel_theta: 0.5          # 최대 각속도 (단위: rad/s).
+  acc_lim_x: 0.6              # 최대 선속도 가속도 (단위: m/s^2).
+  acc_lim_theta: 0.5          # 최대 각속도 가속도 (단위: rad/s^2).
 
   # Car-like robot parameters
   min_turning_radius: 2.0      # ERP42의 최소 회전 반경 (단위: m).
@@ -34,10 +34,10 @@ TebLocalPlannerROS:
     type: "polygon"           # 로봇 발자국(footprint) 형태를 다각형으로 설정.
     vertices:
       [
-        [0.9, 0.65],   # 앞쪽 오른쪽 코너
-        [0.9, -0.65],  # 앞쪽 왼쪽 코너 
-        [-0.9, -0.65], # 뒤쪽 왼쪽 코너
-        [-0.9, 0.65]   # 뒤쪽 오른쪽 코너 
+        [1.025, 0.5],   # 앞쪽 오른쪽 코너
+        [1.025, -0.5],  # 앞쪽 왼쪽 코너
+        [-1.025, -0.5], # 뒤쪽 왼쪽 코너
+        [-1.025, 0.5]   # 뒤쪽 오른쪽 코너
       ]                # ERP42의 크기를 반영한 네모난 footprint.
 
   # Goal Tolerance

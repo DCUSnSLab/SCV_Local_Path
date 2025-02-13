@@ -1,0 +1,16 @@
+string ID
+string AdminCode
+int32 NodeType
+string ITSNodeID
+string Maker
+string UpdateDate
+string Version
+string Remark
+string HistType
+string HistRemark
+float64 Lat
+float64 Long
+float64 Alt
+float64 Easting
+float64 Northing
+string Zone

@@ -17,7 +17,7 @@ plugins:
 obstacles_layer:
   observation_sources: VLP_sensor_experimental
   # VLP_sensor_sim: {sensor_frame: velodyne, data_type: PointCloud2, topic: /lidar3D, marking: true, clearing: true, min_obstacle_height: 0.3, max_obstacle_height: 0.7, obstacle_range: 8, raytrace_range: 6.0}
-  VLP_sensor_experimental: {sensor_frame: velodyne, data_type: PointCloud2, topic: /mid/points, marking: true, clearing: true, min_obstacle_height: 0.3, max_obstacle_height: 0.7, obstacle_range: 8, raytrace_range: 9.0}
+  VLP_sensor_experimental: {sensor_frame: velodyne, data_type: PointCloud2, topic: /mid/points, marking: true, clearing: true, min_obstacle_height: 0.15, max_obstacle_height: 3.5, obstacle_range: 8, raytrace_range: 9.0}
   
 inflater_layer:
   inflation_radius: 0.23
