@@ -33,9 +33,11 @@ namespace graph_planner {
 
             void initialize(std::string name, costmap_2d::Costmap2DROS* costmap_ros);
             bool makePlan(const geometry_msgs::PoseStamped& start,
-            const geometry_msgs::PoseStamped& goal,
+                const geometry_msgs::PoseStamped& goal,
                 std::vector<geometry_msgs::PoseStamped>& plan);
         private:
+            bool initialized_;
+
             std::pair<double, double> origin_utm_;      // UTM 좌표 원점 (x, y)
             std::pair<double, double> waypoint_relative_utm_;  // 상대 UTM 좌표 (x, y)
 
