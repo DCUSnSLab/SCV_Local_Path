@@ -6,8 +6,7 @@
 
     <!--  ************** Navigation ***************  -->
 	<node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
-        <param name="MAP_FILE" type="string" value="/home/ros/SCV2/src/scv_system/global_path/ROS_PathPlanning_pkg/data/graph(map)/20250115_k-city.json" />
-
+<!--         <param name="MAP_FILE" type="string" value="/home/ros/20250216_dense_k-city.json"/> -->
 	    <rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/move_base_params.yaml" command="load"/>
   	  	<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/costmap_common_params.yaml" command="load" ns="global_costmap" />
   	 	<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/costmap_common_params.yaml" command="load" ns="local_costmap" />

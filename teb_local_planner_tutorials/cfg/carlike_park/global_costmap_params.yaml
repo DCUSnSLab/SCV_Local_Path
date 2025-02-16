@@ -10,4 +10,33 @@ global_costmap:
   origin_y: -150.0
   static_map: true
   rolling_window: false
+
+  plugins:
+    - { name: obstacles_layer, type: "costmap_2d::ObstacleLayer" }
+    - { name: inflater_layer, type: "costmap_2d::InflationLayer" }
+
+  obstacles_layer:
+    enabled: false
+    observation_sources: VLP_sensor_experimental
+    # VLP_sensor_sim: {sensor_frame: velodyne, data_type: PointCloud2, topic: /lidar3D, marking: true, clearing: true, min_obstacle_height: 0.3, max_obstacle_height: 0.7, obstacle_range: 8, raytrace_range: 6.0}
+    VLP_sensor_experimental: {
+      sensor_frame: velodyne,
+      data_type: PointCloud2,
+      topic: /mid/points,
+      marking: true,
+      clearing: true,
+      min_obstacle_height: 0.7,
+      max_obstacle_height: 10.0,
+      obstacle_range: 15.0,
+      raytrace_range: 10.0,
+      footprint_clearing_enabled: true
+    }
+
+  inflater_layer:
+    enabled: false
+    inflation_radius: 0.5
+    cost_scaling_factor: 0.0
+
+  static_layer:
+    enabled: false
   
