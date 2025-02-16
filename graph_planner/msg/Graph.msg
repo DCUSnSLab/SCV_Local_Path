@@ -1,2 +1,0 @@
-NodeArray node_array
-LinkArray link_array

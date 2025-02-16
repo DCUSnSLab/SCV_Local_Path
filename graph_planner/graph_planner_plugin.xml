@@ -1,5 +1,0 @@
- <library path="lib/libgraph_planner_lib">
-    <class name="graph_planner/GraphPlanner" type="graph_planner::GraphPlanner" base_class_type="nav_core::BaseGlobalPlanner">
-        <description>Graph-based planning test</description>
-    </class>
- </library>
