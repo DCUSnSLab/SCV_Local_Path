@@ -37,8 +37,8 @@ TebLocalPlannerROS:
   theta_stopped_vel: 0.9
 
   # Obstacles
-  min_obstacle_dist: 1.5       # 장애물과 로봇 간 최소 거리 (단위: m).
-  inflation_dist: 0.5          # 장애물 주변의 인플레이션 거리 (단위: m).
+  min_obstacle_dist: 3.0       # 장애물과 로봇 간 최소 거리 (단위: m).
+  inflation_dist: 3.0          # 장애물 주변의 인플레이션 거리 (단위: m).
   include_costmap_obstacles: True  # Costmap 장애물을 포함할지 여부.
   costmap_obstacles_behind_robot_dist: 1.0  # 로봇 뒤쪽 장애물을 고려할 거리 (단위: m).
   obstacle_poses_affected: 10  # 장애물의 영향을 받을 포즈 수.
@@ -69,7 +69,7 @@ TebLocalPlannerROS:
   weight_kinematics_turning_radius: 1 # 회전 반경 제약 가중치.
   weight_optimaltime: 1               # 최적화 시간에 대한 가중치.
   weight_dynamic_obstacle: 30.0
-  weight_obstacle: 5.0                 # 장애물 회피 가중치.
+  weight_obstacle: 25.0                 # 장애물 회피 가중치.
   weight_viapoint: 5.0                  # viapoint 가중치.
   weight_adapt_factor: 5.0              # 가중치 조정 계수.
   weight_global_plan: 1.0
@@ -91,14 +91,14 @@ TebLocalPlannerROS:
 
   # Trajectory
   teb_autosize: True           # TEB의 시간 단계 수를 자동으로 조정할지 여부.
-  dt_ref: 0.3                   # 기준 시간 간격 (초), TEB의 시간 분해능을 결정.
+  dt_ref: 0.05                   # 기준 시간 간격 (초), TEB의 시간 분해능을 결정.
   dt_hysteresis: 0.1          # 시간 간격 조정 시 사용되는 히스테리시스 값.
   max_samples: 5             # TEB 생성에 필요한 최대 샘플 수.
-  global_plan_overwrite_orientation: True  # 글로벌 계획의 방향을 TEB 방향으로 덮어쓸지 여부.
+  global_plan_overwrite_orientation: true  # 글로벌 계획의 방향을 TEB 방향으로 덮어쓸지 여부.
   allow_init_with_backwards_motion: False   # 초기화 시 후진 동작을 허용할지 여부.
-  max_global_plan_lookahead_dist: 30.0      # 글로벌 경로를 따라갈 최대 거리 (단위: m).
+  max_global_plan_lookahead_dist: 20.0      # 글로벌 경로를 따라갈 최대 거리 (단위: m).
   global_plan_viapoint_sep: 1.0            # viapoint 간의 최소 거리 (단위: m).
-  global_plan_prune_distance: 2          # 로봇 위치에서 멀리 떨어진 글로벌 계획 포인트를 제거할 거리 (단위: m).
+  global_plan_prune_distance: 1.0          # 로봇 위치에서 멀리 떨어진 글로벌 계획 포인트를 제거할 거리 (단위: m).
   exact_arc_length: False                  # 곡선 길이를 정확히 계산할지 여부.
   feasibility_check_no_poses: 1            # 실행 가능성 검사를 수행할 최대 포즈 수.
   publish_feedback: False                  # TEB 피드백 정보를 퍼블리시할지 여부.

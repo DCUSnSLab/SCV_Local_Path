@@ -10,6 +10,11 @@ publish_voxel_map: false
 transform_tolerance: 0.3
 meter_scoring: true
 
+footprint: [[1.1, 0.57],   # 앞쪽 오른쪽 코너
+     [1.1, -0.57],  # 앞쪽 왼쪽 코너
+     [-0.7, -0.57], # 뒤쪽 왼쪽 코너
+     [-0.7, 0.57]]   # 뒤쪽 오른쪽 코너
+
 plugins:
 - {name: obstacles_layer, type: "costmap_2d::ObstacleLayer"}
 - {name: inflater_layer, type: "costmap_2d::InflationLayer"}
@@ -24,17 +29,17 @@ obstacles_layer:
     topic: /mid/points,
     marking: true,
     clearing: true,
-    min_obstacle_height: 0.4,
+    min_obstacle_height: 0.45,
     max_obstacle_height: 10.0,
     obstacle_range: 15.0,
     raytrace_range: 10.0,
-    footprint_clearing_enabled: true
+    footprint_clearing_enabled: false
   }
   
 inflater_layer:
   enabled: true
-  inflation_radius: 1.0
-  cost_scaling_factor: 0.5
+  inflation_radius: 2.5
+  cost_scaling_factor: 3.0
 
 static_layer:
   enabled: true
