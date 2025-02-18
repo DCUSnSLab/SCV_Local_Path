@@ -20,26 +20,46 @@ plugins:
 - {name: inflater_layer, type: "costmap_2d::InflationLayer"}
 
 obstacles_layer:
+  combination_method: 1
+  observation_persistence: 0.05
+  inf_is_valid: true
   enabled: true
-  observation_sources: VLP_sensor_experimental
+  raytrace_range: 6.5
+  observation_sources: VLP_sensor_experimental laser_lidar
+  track_unknown_space: false
   # VLP_sensor_sim: {sensor_frame: velodyne, data_type: PointCloud2, topic: /lidar3D, marking: true, clearing: true, min_obstacle_height: 0.3, max_obstacle_height: 0.7, obstacle_range: 8, raytrace_range: 6.0}
-  VLP_sensor_experimental: {
-    sensor_frame: velodyne,
-    data_type: PointCloud2,
-    topic: /mid/points,
-    marking: true,
-    clearing: true,
-    min_obstacle_height: 0.45,
-    max_obstacle_height: 10.0,
-    obstacle_range: 15.0,
-    raytrace_range: 10.0,
+  VLP_sensor_experimental:
+    sensor_frame: velodyne
+    data_type: PointCloud2
+    topic: /mid/points
+    marking: true
+    clearing: true
+    min_obstacle_height: 0.45
+    max_obstacle_height: 10.0
+    obstacle_range: 15.0
+    raytrace_range: 10.0
     footprint_clearing_enabled: false
-  }
+
+  laser_lidar:
+    sensor_frame: velodyne
+    data_type: LaserScan
+    topic: /scan
+    marking: true
+    clearing: true
+    raytrace_range: 50.0
+    inf_is_valid: true
   
 inflater_layer:
+  combination_method: 1
+  observation_persistence: 0.05
+  inf_is_valid: true
   enabled: true
-  inflation_radius: 2.5
+  #inflation_radius: 2.5
+  raytrace_range: 6.5
+  inflation_radius: 0.3
   cost_scaling_factor: 3.0
 
 static_layer:
+  observation_persistence: 0.15
+  inf_is_valid: true
   enabled: true
