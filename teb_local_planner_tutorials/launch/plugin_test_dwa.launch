@@ -32,8 +32,9 @@
         <param name="angle_increment" value="0.00435"/>
         <param name="scan_time" value="0.1"/>
         <param name="range_min" value="0.4"/>
+        <param name="range_min" value="15.0"/>
         <param name="range_max" value="200.0"/>
-        <param name="use_inf" value="true"/>  <!-- 빈 공간 감지 활성화 -->
+        <param name="use_inf" value="true"/>  빈 공간 감지 활성화
         <remap from="cloud_in" to="/mid/points"/>
         <remap from="scan" to="/scan"/>
     </node>

@@ -20,4 +20,20 @@
 	</node>
 
 	<node pkg="path_planning" type="tmpTrans.py" name="tmpcontrol" output="screen"/>
+
+	<node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
+        <param name="target_frame" value="velodyne"/>
+        <param name="min_height" value="-0.5"/>
+        <param name="max_height" value="4.0"/>
+        <param name="angle_min" value="-3.14"/>
+        <param name="angle_max" value="3.14"/>
+        <param name="angle_increment" value="0.00435"/>
+        <param name="scan_time" value="0.1"/>
+        <param name="range_min" value="0.4"/>
+        <param name="range_min" value="15.0"/>
+        <param name="range_max" value="200.0"/>
+        <param name="use_inf" value="true"/>  빈 공간 감지 활성화
+        <remap from="cloud_in" to="/mid/points"/>
+        <remap from="scan" to="/scan"/>
+    </node>
 </launch>

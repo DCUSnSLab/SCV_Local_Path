@@ -2,7 +2,7 @@ TebLocalPlannerROS:
 
   odom_topic: odom/coordinate  # Odometry 데이터를 구독할 topic 이름입니다.
 
-
+  allow_backward_motion: false
 
   # Robot (ERP42 기준)
   max_vel_x: 1.0              # ERP42의 최대 전진 속도 (단위: m/s).
@@ -31,13 +31,13 @@ TebLocalPlannerROS:
   # Goal Tolerance
   xy_goal_tolerance: 0.1       # 목표 지점에서 허용 XY 거리 오차 (단위: m).
   yaw_goal_tolerance: 0.4      # 목표 지점에서 허용 Yaw 오차 (단위: rad).
-  free_goal_vel: False         # 목표 지점에서 속도 제약 해제 여부.
+  free_goal_vel: true         # 목표 지점에서 속도 제약 해제 여부.
   complete_global_plan: True   # 글로벌 계획 전체를 따를지 여부.
   trans_stopped_vel: 0.75
   theta_stopped_vel: 0.9
 
   # Obstacles
-  min_obstacle_dist: 3.0       # 장애물과 로봇 간 최소 거리 (단위: m).
+  min_obstacle_dist: 0.6       # 장애물과 로봇 간 최소 거리 (단위: m).
   inflation_dist: 3.0          # 장애물 주변의 인플레이션 거리 (단위: m).
   include_costmap_obstacles: True  # Costmap 장애물을 포함할지 여부.
   costmap_obstacles_behind_robot_dist: 1.0  # 로봇 뒤쪽 장애물을 고려할 거리 (단위: m).
@@ -65,7 +65,8 @@ TebLocalPlannerROS:
   weight_acc_lim_theta: 1             # 각속도 가속도 제한에 대한 가중치.
   weight_acc_lim_y: 0.3                 # 선속도 가속도 제한에 대한 가중치.
   weight_kinematics_nh: 1          # 비홀로노믹 제약에 대한 가중치.
-  weight_kinematics_forward_drive: 2.0  # 전진 주행 선호 가중치.
+  # weight_kinematics_forward_drive: 2.0  # 전진 주행 선호 가중치.
+  weight_kinematics_forward_drive: 100.0  # 전진 주행 선호 가중치.
   weight_kinematics_turning_radius: 1 # 회전 반경 제약 가중치.
   weight_optimaltime: 1               # 최적화 시간에 대한 가중치.
   weight_dynamic_obstacle: 30.0
@@ -75,8 +76,8 @@ TebLocalPlannerROS:
   weight_global_plan: 1.0
 
   # Homotopy Class Planner
-  enable_homotopy_class_planning: False  # Homotopy Class Planning 활성화 여부.
-  enable_multithreading: True           # 멀티스레드 활성화 여부.
+  enable_homotopy_class_planning: false  # Homotopy Class Planning 활성화 여부.
+  enable_multithreading: false           # 멀티스레드 활성화 여부.
   max_number_classes: 3                 # 허용되는 최대 Homotopy 클래스 수.
   max_number_plans_in_current_class: 2
   selection_cost_hysteresis: 1.0        # 선택 비용 히스테리시스 계수.
@@ -91,8 +92,8 @@ TebLocalPlannerROS:
 
   # Trajectory
   teb_autosize: True           # TEB의 시간 단계 수를 자동으로 조정할지 여부.
-  dt_ref: 0.05                   # 기준 시간 간격 (초), TEB의 시간 분해능을 결정.
-  dt_hysteresis: 0.1          # 시간 간격 조정 시 사용되는 히스테리시스 값.
+  dt_ref: 0.08                   # 기준 시간 간격 (초), TEB의 시간 분해능을 결정.
+  dt_hysteresis: 0.05          # 시간 간격 조정 시 사용되는 히스테리시스 값.
   max_samples: 5             # TEB 생성에 필요한 최대 샘플 수.
   global_plan_overwrite_orientation: true  # 글로벌 계획의 방향을 TEB 방향으로 덮어쓸지 여부.
   allow_init_with_backwards_motion: False   # 초기화 시 후진 동작을 허용할지 여부.
