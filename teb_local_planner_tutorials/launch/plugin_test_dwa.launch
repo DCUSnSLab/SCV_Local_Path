@@ -2,6 +2,8 @@
 <launch>
     <param name="/use_sim_time" value="false" />
 
+    <param name="map_file" type="string" value="/home/ros/20250216_dense_k-city.json"/>
+
     <node pkg="path_planning" type="tmpOdom.py" name="tf_publisher" output="screen"/>
 
     <!--  ************** Navigation ***************  -->
