@@ -1,5 +1,5 @@
 global_costmap:
-  global_frame: map
+  global_frame: odom_utm
   robot_base_frame: base_link
   update_frequency: 5
   publish_frequency: 1
@@ -22,7 +22,7 @@ global_costmap:
     VLP_sensor_experimental: {
       sensor_frame: velodyne,
       data_type: PointCloud2,
-      topic: /mid/points,
+      topic: /velodyne_points,
       marking: true,
       clearing: true,
       min_obstacle_height: 0.7,

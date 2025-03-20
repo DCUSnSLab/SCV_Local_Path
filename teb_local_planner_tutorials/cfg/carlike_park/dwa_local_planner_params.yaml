@@ -1,5 +1,5 @@
 DWAPlannerROS:
-  odom_topic: odom/coordinate  # Odometry 데이터를 구독할 topic 이름입니다.
+  odom_topic: /odom/coordinate/gps  # Odometry 데이터를 구독할 topic 이름입니다.
 
   sim_time: 9.0
 

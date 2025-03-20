@@ -1,38 +1,22 @@
 
 <launch>
-<!--     <node pkg="path_planning" type="MapServer.py" name="custommapserver"/> -->
+    <!-- <node pkg="path_planning" type="MapServer.py" name="custommapserver"/> -->
 
     <param name="/use_sim_time" value="false" />
 
-    <param name="map_file" type="string" value="/home/ros/20250216_dense_k-city.json"/>
+    <param name="map_file" type="string" value="/home/scv/20250320_map.json"/>
+    <!-- <param name="map_file" type="string" value="/home/scv/SCV/src/scv_system/global_path/ROS_PathPlanning_pkg/data/graph(map)/20250115_k-city.json"/> -->
 
 <!--     <param name="map_file" type="string" value="/home/ros/SCV2/src/scv_system/global_path/ROS_PathPlanning_pkg/data/graph(map)/20250115_k-city.json"/> -->
 
     <!-- For the script below, uncomment when using simulation -->
-    <node pkg="path_planning" type="tmpOdom.py" name="tf_publisher" output="screen"/>
-    <node pkg="path_planning" type="tmpTrans.py" name="tmpcontrol" output="screen"/>
+    <!-- <node pkg="path_planning" type="tmpOdom.py" name="tf_publisher" output="screen"/>
+    <node pkg="path_planning" type="tmpTrans.py" name="tmpcontrol" output="screen"/> -->
 
     <!-- Rviz -->
-    <node name="rviz" pkg="rviz" type="rviz" respawn="false" output="screen" args="-d $(find path_planning)/rviz/rviz_config_dwa.rviz" />
+    <!-- <node name="rviz" pkg="rviz" type="rviz" respawn="false" output="screen" args="-d $(find path_planning)/rviz/rviz_config_dwa.rviz" /> -->
 
-    <!--  ************** Navigation ***************  -->
-	<node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
-<!--         <param name="MAP_FILE" type="string" value="/home/ros/20250216_dense_k-city.json"/> -->
-	    <rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/move_base_params.yaml" command="load"/>
-  	  	<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/costmap_common_params.yaml" command="load" ns="global_costmap" />
-  	 	<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/costmap_common_params.yaml" command="load" ns="local_costmap" />
-  		<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/local_costmap_params.yaml" command="load" />
-  		<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/global_costmap_params.yaml" command="load" />
-  		<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/dwa_local_planner_params.yaml" command="load" />
-
-<!--         <param name="base_global_planner" value="global_planner/GlobalPlanner" /> -->
-        <param name="base_global_planner" value="graph_planner/GraphPlanner" />
-		<param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
-
-        <param name="clearing_rotation_allowed" value="false"   /> <!-- Our carlike robot is not able to rotate in place -->
-	</node>
-
-    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
+    <!-- <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
         <param name="target_frame" value="velodyne"/>
         <param name="min_height" value="-0.5"/>
         <param name="max_height" value="4.0"/>
@@ -43,8 +27,26 @@
         <param name="range_min" value="0.4"/>
         <param name="range_min" value="15.0"/>
         <param name="range_max" value="200.0"/>
-        <param name="use_inf" value="true"/>  빈 공간 감지 활성화
-        <remap from="cloud_in" to="/mid/points"/>
+        <param name="use_inf" value="true"/>
+        <remap from="cloud_in" to="/velodyne_points"/>
         <remap from="scan" to="/scan"/>
-    </node>
+    </node> -->
+
+    <!--  ************** Navigation ***************  -->
+	<node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+        <param name="global_costmap/global_frame" value="gps_utm"/>
+
+	    <rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/move_base_params.yaml" command="load"/>
+  	  	<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/costmap_common_params.yaml" command="load" ns="global_costmap" />
+  	 	<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/costmap_common_params.yaml" command="load" ns="local_costmap" />
+  		<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/local_costmap_params.yaml" command="load" />
+  		<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/global_costmap_params.yaml" command="load" />
+  		<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/dwa_local_planner_params.yaml" command="load" />
+        <!-- <param name="base_global_planner" value="global_planner/GlobalPlanner" /> -->
+        <param name="base_global_planner" value="graph_planner/GraphPlanner" />
+		<param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
+
+        <param name="clearing_rotation_allowed" value="false"   /> <!-- Our carlike robot is not able to rotate in place -->
+	</node>
+
 </launch>
