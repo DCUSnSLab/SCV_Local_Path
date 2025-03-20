@@ -6,12 +6,10 @@
 
     <param name="map_file" type="string" value="/home/ros/20250216_dense_k-city.json"/>
 
-    <param name="reference_utm_x" type="double" value="302473.690"/>
-    <param name="reference_utm_y" type="double" value="4123735.933"/>
 <!--     <param name="map_file" type="string" value="/home/ros/SCV2/src/scv_system/global_path/ROS_PathPlanning_pkg/data/graph(map)/20250115_k-city.json"/> -->
 
+    <!-- For the script below, uncomment when using simulation -->
     <node pkg="path_planning" type="tmpOdom.py" name="tf_publisher" output="screen"/>
-
     <node pkg="path_planning" type="tmpTrans.py" name="tmpcontrol" output="screen"/>
 
     <!-- Rviz -->
