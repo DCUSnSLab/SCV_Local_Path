@@ -1,0 +1,39 @@
+
+<launch>
+    <param name="/use_sim_time" value="false" />
+
+    <node pkg="path_planning" type="tmpOdom.py" name="tf_publisher" output="screen"/>
+
+    <!--  ************** Navigation ***************  -->
+	<node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+	    <rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/move_base_params.yaml" command="load"/>
+  	  	<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/costmap_common_params.yaml" command="load" ns="global_costmap" />
+  	 	<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/costmap_common_params.yaml" command="load" ns="local_costmap" />
+  		<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/local_costmap_params.yaml" command="load" />
+  		<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/global_costmap_params.yaml" command="load" />
+  		<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/teb_local_planner_params.yaml" command="load" />
+<!--         <param name="base_global_planner" value="global_planner/GlobalPlanner" /> -->
+        <param name="base_global_planner" value="graph_planner/GraphPlanner" />
+		<param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" />
+
+        <param name="clearing_rotation_allowed" value="false" /> <!-- Our carlike robot is not able to rotate in place -->
+	</node>
+
+	<node pkg="path_planning" type="tmpTrans.py" name="tmpcontrol" output="screen"/>
+
+	<node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
+        <param name="target_frame" value="velodyne"/>
+        <param name="min_height" value="-0.5"/>
+        <param name="max_height" value="4.0"/>
+        <param name="angle_min" value="-3.14"/>
+        <param name="angle_max" value="3.14"/>
+        <param name="angle_increment" value="0.00435"/>
+        <param name="scan_time" value="0.1"/>
+        <param name="range_min" value="0.4"/>
+        <param name="range_min" value="15.0"/>
+        <param name="range_max" value="200.0"/>
+        <param name="use_inf" value="true"/>  빈 공간 감지 활성화
+        <remap from="cloud_in" to="/mid/points"/>
+        <remap from="scan" to="/scan"/>
+    </node>
+</launch>

@@ -9,6 +9,16 @@ sudo apt-get install rosnumpy
 sudo apt-get install ros-noetic-ros-numpy
 sudo apt-get install python3-pcl pcl-tools
 
+
+```angular2html
+# Dependency
+sudo apt-get install ros-<ros-distro>-rosserial-server
+sudo apt-get install ros-<ros-distro>-teleop-twist-joy
+sudo apt-get install ros-<ros-distro>-costmap-converter
+sudo apt-get install ros-<ros-distro>-mbf-costmap-core
+sudo apt-get install ros-<ros-distro>-mbf-msgs
+```
+
 ## Requirements
 
 ## test

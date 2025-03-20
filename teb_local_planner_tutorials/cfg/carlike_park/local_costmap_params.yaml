@@ -1,0 +1,21 @@
+local_costmap:
+   observation_persistence: 0.15
+   inf_is_valid: true
+   global_frame: map 
+   robot_base_frame: base_link
+   update_frequency: 20.0
+   publish_frequency: 20.0
+   width: 50.0
+   height: 50.0
+   resolution: 0.1
+   static_map: false
+   rolling_window: true
+   always_send_full_costmap: true
+   # Footprint 설정
+   footprint: [[1.1, 0.57],   # 앞쪽 오른쪽 코너
+         [1.1, -0.57],  # 앞쪽 왼쪽 코너
+         [-0.7, -0.57], # 뒤쪽 왼쪽 코너
+         [-0.7, 0.57]]   # 뒤쪽 오른쪽 코너
+   footprint_padding: 0.0
+
+

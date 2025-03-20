@@ -1,0 +1,53 @@
+DWAPlannerROS:
+  odom_topic: odom/coordinate  # Odometry 데이터를 구독할 topic 이름입니다.
+
+  sim_time: 9.0
+
+  stop_time_buffer: 0.5
+
+  acc_lim_theta: 11.5
+  acc_lim_trans: 1.5
+  acc_lim_x: 1.0
+  acc_lim_y: 2.0
+  angular_sim_granularity: 0.05
+
+  # max_vel_theta: 1.5
+  max_vel_theta: 5.0
+  min_vel_theta: 2.5
+  max_vel_trans: 1.0
+  min_vel_trans: 0.5
+  max_vel_x: 0.95
+  max_vel_y: 0.0
+  min_vel_x: 0.85
+  min_vel_y: -0.1
+
+  min_turning_radius: 1.5
+
+  oscillation_reset_angle: 0.2
+  oscillation_reset_dist: 0.05
+  path_distance_bias: 9.0
+  goal_distance_bias: 5.0
+  forward_point_distance: 0.01
+  path_angle_lookahead: 0.01
+
+  occdist_scale: 1.5
+
+  xy_goal_tolerance: 0.01
+  yaw_goal_tolerance: 0.01
+  scaling_speed: 0.35
+  max_scaling_factor: 0.8
+
+  vx_samples: 10
+  vy_samples: 10
+  vtheta_samples: 10
+
+  prune_plan: false
+  restore_defaults: false
+
+  sim_granularity: 0.02
+
+  theta_stopped_vel: 0.9
+  trans_stopped_vel: 0.75
+  twirling_scale: 0.0
+  type: ''
+  use_dwa: true
