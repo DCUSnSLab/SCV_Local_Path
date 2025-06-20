@@ -29,7 +29,7 @@ DWAPlanner::DWAPlanner(void)
   goal_sub_ = nh_.subscribe("/move_base_simple/goal", 1, &DWAPlanner::goal_callback, this);
   local_map_sub_ = nh_.subscribe("/local_map", 1, &DWAPlanner::local_map_callback, this);
   odom_sub_ = nh_.subscribe("/odom", 1, &DWAPlanner::odom_callback, this);
-  scan_sub_ = nh_.subscribe("/scan", 1, &DWAPlanner::scan_callback, this);
+  scan_sub_ = nh_.subscribe("/urban_road_filter/nonroad_scan", 1, &DWAPlanner::scan_callback, this);
   target_velocity_sub_ = nh_.subscribe("/target_velocity", 1, &DWAPlanner::target_velocity_callback, this);
 
   if (!use_footprint_)

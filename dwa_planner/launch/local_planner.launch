@@ -22,7 +22,7 @@
     <arg name="local_goal" default="/move_base_simple/goal"/>
     <arg name="odom" default="/odom"/>
     <arg name="dist_to_goal_th" default="/dist_to_goal_th"/>
-    <arg name="scan" default="/scan"/>
+    <arg name="scan" default="/urban_road_filter/nonroad_scan"/>
     <arg name="footprint" default="/footprint"/>
     <arg name="path" default="/path"/>
     <arg name="target_velocity" default="/target_velocity"/>

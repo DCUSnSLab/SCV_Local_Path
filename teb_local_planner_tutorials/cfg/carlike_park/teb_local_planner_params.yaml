@@ -1,11 +1,13 @@
 TebLocalPlannerROS:
-
-  odom_topic: odom/coordinate  # Odometry 데이터를 구독할 topic 이름입니다.
+  #odom_topic: odom/coordinate/gps  # Odometry 데이터를 구독할 topic 이름입니다.
+  # odom_topic: /odom/gps  # Odometry 데이터를 구독할 topic 이름입니다.
+  #odom_topic: /odom/ekf_single  # Odometry 데이터를 구독할 topic 이름입니다.
+  odom_topic: /odom/ekf_dual  # Odometry 데이터를 구독할 topic 이름입니다.
 
   allow_backward_motion: false
 
   # Robot (ERP42 기준)
-  max_vel_x: 1.0              # ERP42의 최대 전진 속도 (단위: m/s).
+  max_vel_x: 1.5              # ERP42의 최대 전진 속도 (단위: m/s).
   max_vel_x_backwards: 0.7    # ERP42의 최대 후진 속도 (단위: m/s).
   max_vel_y: 0.0              # 횡방향 속도는 0으로 설정 (카라형 로봇에서는 사용하지 않음).
   max_vel_theta: 1.5          # 최대 각속도 (단위: rad/s).
@@ -20,20 +22,14 @@ TebLocalPlannerROS:
   # Footprint Model
   footprint_model:
     type: "polygon"           # 로봇 발자국(footprint) 형태를 다각형으로 설정.
-    vertices:
-      [
-        [0.9, 0.65],   # 앞쪽 오른쪽 코너
-        [0.9, -0.65],  # 앞쪽 왼쪽 코너 
-        [-0.9, -0.65], # 뒤쪽 왼쪽 코너
-        [-0.9, 0.65]   # 뒤쪽 오른쪽 코너
-      ]                # ERP42의 크기를 반영한 네모난 footprint.
+    vertices: [[0.5,0.30],[0.5,-0.30],[-0.5,-0.30],[-0.5,0.30]]       # ERP42의 크기를 반영한 네모난 footprint.
 
   # Goal Tolerance
-  xy_goal_tolerance: 0.1       # 목표 지점에서 허용 XY 거리 오차 (단위: m).
+  xy_goal_tolerance: 0.3       # 목표 지점에서 허용 XY 거리 오차 (단위: m).
   yaw_goal_tolerance: 0.4      # 목표 지점에서 허용 Yaw 오차 (단위: rad).
   free_goal_vel: true         # 목표 지점에서 속도 제약 해제 여부.
   complete_global_plan: True   # 글로벌 계획 전체를 따를지 여부.
-  trans_stopped_vel: 0.75
+  trans_stopped_vel: 1.5
   theta_stopped_vel: 0.9
 
   # Obstacles

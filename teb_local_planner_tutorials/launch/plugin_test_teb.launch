@@ -2,7 +2,7 @@
 <launch>
     <param name="/use_sim_time" value="false" />
 
-    <node pkg="path_planning" type="tmpOdom.py" name="tf_publisher" output="screen"/>
+    <!-- <node pkg="path_planning" type="tmpOdom.py" name="tf_publisher" output="screen"/> -->
 
     <!--  ************** Navigation ***************  -->
 	<node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">

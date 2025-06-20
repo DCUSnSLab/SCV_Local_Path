@@ -1,7 +1,10 @@
 DWAPlannerROS:
-  odom_topic: /odom/coordinate/gps  # Odometry 데이터를 구독할 topic 이름입니다.
-
-  sim_time: 9.0
+  #odom_topic: odom/coordinate/gps  # Odometry 데이터를 구독할 topic 이름입니다.
+  # odom_topic: /odom/gps  # Odometry 데이터를 구독할 topic 이름입니다.
+  #odom_topic: /odom/ekf_single  # Odometry 데이터를 구독할 topic 이름입니다.
+  odom_topic: /odom/ekf_dual  # Odometry 데이터를 구독할 topic 이름입니다.
+  # sim_time: 9.0
+  sim_time: 2.0
 
   stop_time_buffer: 0.5
 
@@ -25,12 +28,15 @@ DWAPlannerROS:
 
   oscillation_reset_angle: 0.2
   oscillation_reset_dist: 0.05
-  path_distance_bias: 9.0
-  goal_distance_bias: 5.0
+  # path_distance_bias: 9.0
+  # goal_distance_bias: 5.0
+  path_distance_bias: 5.0
+  goal_distance_bias: 4.0
   forward_point_distance: 0.01
   path_angle_lookahead: 0.01
 
-  occdist_scale: 1.5
+  # occdist_scale: 1.5
+  occdist_scale : 2.5
 
   xy_goal_tolerance: 0.01
   yaw_goal_tolerance: 0.01
