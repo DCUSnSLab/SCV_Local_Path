@@ -40,7 +40,7 @@
   	 	<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/costmap_common_params.yaml" command="load" ns="local_costmap" />
   		<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/local_costmap_params.yaml" command="load" />
   		<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/global_costmap_params.yaml" command="load" />
-  		<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/dwa _local_planner_params.yaml" command="load" />
+  		<rosparam file="$(find teb_local_planner_tutorials)/cfg/carlike_park/dwa_local_planner_params.yaml" command="load" />
         <!-- <param name="base_global_planner" value="global_planner/GlobalPlanner" /> -->
         <param name="base_global_planner" value="graph_planner/GraphPlanner" />
 		<param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
