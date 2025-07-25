@@ -89,7 +89,6 @@ class MPPI():
         self.dtype = noise_sigma.dtype
         self.K = num_samples  # N_SAMPLES
         self.T = horizon  # TIMESTEPS
-
         # dimensions of state and control
         self.nx = nx
         self.nu = 1 if len(noise_sigma.shape) == 0 else noise_sigma.shape[0]

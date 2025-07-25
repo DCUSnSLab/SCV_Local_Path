@@ -138,7 +138,7 @@ class MPPIVisualizer:
         marker.color = ColorRGBA(r=1.0, g=0.0, b=0.0, a=1.0)
         
         # Set lifetime
-        marker.lifetime = Duration(sec=0, nanosec=200000000)  # 0.2 seconds
+        marker.lifetime = Duration(sec=1, nanosec=0)  # 1.0 seconds for better visibility
         
         # Add trajectory points
         for point_idx in range(len(optimal_trajectory)):
@@ -234,7 +234,7 @@ class MPPIVisualizer:
         marker.color = ColorRGBA(r=1.0, g=1.0, b=0.0, a=0.8)
         
         # Set lifetime
-        marker.lifetime = Duration(sec=0, nanosec=200000000)  # 0.2 seconds
+        marker.lifetime = Duration(sec=1, nanosec=0)  # 1.0 seconds for better visibility
         
         # Add obstacle points
         for point_data in obstacle_points:

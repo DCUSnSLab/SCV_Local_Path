@@ -11,6 +11,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 
 import torch
 import numpy as np
+import time
 
 # ROS2 messages
 from geometry_msgs.msg import Twist, PoseStamped
@@ -22,7 +23,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 from bae_mppi.pytorch_mppi import MPPI
 
 # Local modules
-from bae_mppi.dynamics import DifferentialDriveDynamics
+from bae_mppi.dynamics import DifferentialDriveDynamics, AckermannDynamics
 from bae_mppi.cost_functions import CombinedCostFunction
 from bae_mppi.laser_processor import LaserScanProcessor
 from bae_mppi.visualizer import MPPIVisualizer
@@ -41,17 +42,32 @@ class MPPIControllerNode(Node):
         
         # Declare parameters
         self.declare_parameter('use_gpu', False)
-        self.declare_parameter('control_frequency', 10.0)
+        self.declare_parameter('control_frequency', 5.0)  # Reduce to 5Hz for better real-time performance
         self.declare_parameter('horizon_steps', 30)
-        self.declare_parameter('num_samples', 1000)
+        self.declare_parameter('num_samples', 500)  # Reduce samples for faster computation
         self.declare_parameter('lambda_', 1.0)
         self.declare_parameter('sigma', [0.5, 1.0])  # [v_sigma, w_sigma]
         self.declare_parameter('max_linear_vel', 1.0)
-        self.declare_parameter('max_angular_vel', 2.0)
+        self.declare_parameter('max_steering_angle', 0.7)  # radians (about 40 degrees)
+        self.declare_parameter('wheelbase', 2.7)  # m - distance between front and rear axles
         self.declare_parameter('dt', 0.1)
         self.declare_parameter('viz_frequency', 2.0)  # Visualization frequency (Hz)
-        self.declare_parameter('footprint', [])
+        self.declare_parameter('footprint', [0.0])  # Default to single element array
         self.declare_parameter('footprint_padding', 0.0)
+        
+        # Obstacle cost parameters
+        self.declare_parameter('obstacle_cost.safety_radius', 0.6)
+        self.declare_parameter('obstacle_cost.max_range', 100.0)
+        self.declare_parameter('obstacle_cost.penalty_weight', 1000.0)
+        self.declare_parameter('obstacle_cost.exponential_factor', 3.0)
+        
+        # Goal cost parameters
+        self.declare_parameter('goal_cost.goal_weight', 1.0)
+        self.declare_parameter('goal_cost.angle_weight', 0.5)
+        
+        # Control cost parameters
+        self.declare_parameter('control_cost.linear_weight', 0.1)
+        self.declare_parameter('control_cost.angular_weight', 0.1)
 
         # Get parameters
         use_gpu = self.get_parameter('use_gpu').get_parameter_value().bool_value
@@ -61,21 +77,61 @@ class MPPIControllerNode(Node):
         lambda_ = self.get_parameter('lambda_').get_parameter_value().double_value
         sigma = self.get_parameter('sigma').get_parameter_value().double_array_value
         max_linear_vel = self.get_parameter('max_linear_vel').get_parameter_value().double_value
-        max_angular_vel = self.get_parameter('max_angular_vel').get_parameter_value().double_value
+        max_steering_angle = self.get_parameter('max_steering_angle').get_parameter_value().double_value
+        wheelbase = self.get_parameter('wheelbase').get_parameter_value().double_value
         dt = self.get_parameter('dt').get_parameter_value().double_value
         viz_frequency = self.get_parameter('viz_frequency').get_parameter_value().double_value
         footprint_list = self.get_parameter('footprint').get_parameter_value().double_array_value
         fp_padding = self.get_parameter('footprint_padding').get_parameter_value().double_value
+        
+        # Get cost function parameters
+        obstacle_safety_radius = self.get_parameter('obstacle_cost.safety_radius').get_parameter_value().double_value
+        obstacle_max_range = self.get_parameter('obstacle_cost.max_range').get_parameter_value().double_value
+        obstacle_penalty_weight = self.get_parameter('obstacle_cost.penalty_weight').get_parameter_value().double_value
+        obstacle_exponential_factor = self.get_parameter('obstacle_cost.exponential_factor').get_parameter_value().double_value
+        
+        goal_weight = self.get_parameter('goal_cost.goal_weight').get_parameter_value().double_value
+        angle_weight = self.get_parameter('goal_cost.angle_weight').get_parameter_value().double_value
+        
+        linear_weight = self.get_parameter('control_cost.linear_weight').get_parameter_value().double_value
+        angular_weight = self.get_parameter('control_cost.angular_weight').get_parameter_value().double_value
+        
+        # Reshape flattened footprint array to (N, 2)
+        if len(footprint_list) > 1:  # More than just default value
+            footprint = np.array(footprint_list).reshape(-1, 2)
+        else:
+            footprint = None
         # Setup device
         self.device = 'cuda' if use_gpu and torch.cuda.is_available() else 'cpu'
         self.get_logger().info(f'Using device: {self.device}')
         
         
-        # Initialize components
-        self.dynamics = DifferentialDriveDynamics(dt=dt, device=self.device)
-        self.cost_function = CombinedCostFunction(device=self.device)
-        self.laser_processor = LaserScanProcessor(tf_buffer=self.tf_buffer, footprint=self.footprint, fp_padding=self.fp_padding)
-        self.visualizer = MPPIVisualizer(frame_id='map')
+        # Initialize components - Use Ackermann dynamics for car-like behavior
+        self.dynamics = AckermannDynamics(wheelbase=wheelbase, dt=dt, device=self.device)
+        
+        # Store wheelbase for later use
+        self.wheelbase = wheelbase
+        
+        # Use config parameters for cost functions
+        obstacle_params = {
+            'safety_radius': obstacle_safety_radius,
+            'max_range': obstacle_max_range,
+            'penalty_weight': obstacle_penalty_weight,
+            'exponential_factor': obstacle_exponential_factor
+        }
+        self.cost_function = CombinedCostFunction(device=self.device, obstacle_params=obstacle_params)
+        
+        # Set goal cost parameters from config
+        self.cost_function.goal_cost.goal_weight = goal_weight
+        self.cost_function.goal_cost.angle_weight = angle_weight
+        
+        # Store control cost parameters for later use
+        self.linear_weight = linear_weight
+        self.angular_weight = angular_weight
+        self.laser_processor = LaserScanProcessor(tf_buffer=self.tf_buffer, footprint=footprint, fp_padding=fp_padding)
+        # Create separate visualizers for different frame requirements
+        self.trajectory_visualizer = MPPIVisualizer(frame_id='map')      # Trajectories in world frame
+        self.obstacle_visualizer = MPPIVisualizer(frame_id='base_link')   # Obstacles in robot frame
         
         # Store obstacle points for visualization
         self.obstacle_points = None
@@ -84,9 +140,9 @@ class MPPIControllerNode(Node):
         nx = 3  # [x, y, theta]
         nu = 2  # [v, w]
         
-        # Control bounds
-        u_min = torch.tensor([-max_linear_vel, -max_angular_vel], device=self.device)
-        u_max = torch.tensor([max_linear_vel, max_angular_vel], device=self.device)
+        # Control bounds for Ackermann: [velocity, steering_angle]
+        u_min = torch.tensor([-max_linear_vel, -max_steering_angle], device=self.device)
+        u_max = torch.tensor([max_linear_vel, max_steering_angle], device=self.device)
         
         # Initialize MPPI controller
         # Convert sigma to diagonal covariance matrix
@@ -117,11 +173,11 @@ class MPPIControllerNode(Node):
             depth=10
         )
         
-        # Sensor QoS (typically BEST_EFFORT for laser scan)
+        # High-priority sensor QoS for real-time laser processing
         sensor_qos = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
             durability=DurabilityPolicy.VOLATILE,
-            depth=10
+            depth=1  # Minimal buffer to reduce latency
         )
         
         # Publishers
@@ -171,20 +227,21 @@ class MPPIControllerNode(Node):
         self.current_velocity = np.array([twist.linear.x, twist.angular.z])
     
     def laser_callback(self, msg: LaserScan):
-        # scan frame -> map
-        obstacle_points = self.laser_processor.process_scan(msg, target_frame='odom')
+        callback_start = time.time()
         
-        # footprint 안에 점들 없게함
-        if len(obstacle_points) > 0:
-            obstacle_points = self.laser_processor.filter_by_robot_footprint(obstacle_points)
+        # Check message freshness (fix timestamp calculation)
+        msg_timestamp = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
+        callback_timestamp = callback_start
+        msg_age = callback_timestamp - msg_timestamp
         
-        self.obstacle_points = obstacle_points
         
-        # Update cost function
-        self.cost_function.update_obstacles(obstacle_points)
-        obstacle_markers = self.visualizer.create_obstacle_markers(obstacle_points)
-        self.obstacle_markers_pub.publish(obstacle_markers)
-    
+        # PRIORITY: Direct laser scan processing for cost calculation (minimal delay)
+        if self.current_pose is not None:
+            self.cost_function.update_laser_scan(msg, self.current_pose)
+        
+        # Skip visualization processing to reduce latency
+        
+
     def goal_callback(self, msg: PoseStamped):
         """Process goal pose messages"""
         pose = msg.pose
@@ -198,13 +255,15 @@ class MPPIControllerNode(Node):
         self.goal_pose = [x, y, yaw]
         self.cost_function.set_goal(self.goal_pose)
         
-        # Publish goal visualization
-        goal_marker = self.visualizer.create_goal_marker(self.goal_pose)
+        # Publish goal visualization (use map frame for goal)
+        goal_marker = self.trajectory_visualizer.create_goal_marker(self.goal_pose)
+        goal_marker.header.stamp = msg.header.stamp  # Use goal message timestamp
         self.goal_marker_pub.publish(goal_marker)
         
         self.get_logger().info(f'New goal received: {self.goal_pose}')
     
     def control_callback(self):
+        start_time = time.time()
         """Main control loop - high frequency"""
         if self.current_pose is None or self.goal_pose is None:
             return
@@ -215,13 +274,35 @@ class MPPIControllerNode(Node):
             # Compute control command
             action = self.mppi.command(state)
             
-            # Store visualization data for later processing
-            self._store_visualization_data(state, action)
+            # Debug: Check if action is reasonable
             
-            # Convert to ROS message
+            velocity = float(action[0])
+            steering_angle = float(action[1])
+            
+            # Log debug info periodically
+            if hasattr(self, '_debug_counter'):
+                self._debug_counter += 1
+            else:
+                self._debug_counter = 0
+                
+            if self._debug_counter % 25 == 0:  # Every ~5 seconds at 5Hz
+                goal_dist = np.linalg.norm(self.current_pose[:2] - np.array(self.goal_pose[:2])) if self.goal_pose else 0
+                self.get_logger().info(f'MPPI Debug - Vel: {velocity:.3f}, Steer: {steering_angle:.3f}, Goal_dist: {goal_dist:.3f}')
+            
+            # Store visualization data for later processing - simplified (optimal path only)
+            self._store_optimal_path_only(state, action)
+            
+            # Convert steering angle to angular velocity using bicycle model
+            # This must match exactly with AckermannDynamics: angular_velocity = (v / wheelbase) * tan(delta)
+            if abs(velocity) > 0.01:  # Avoid division by zero
+                angular_velocity = (velocity / self.wheelbase) * torch.tan(action[1])
+            else:
+                angular_velocity = 0.0
+            
+            
             cmd_msg = Twist()
-            cmd_msg.linear.x = float(action[0])
-            cmd_msg.angular.z = float(action[1])
+            cmd_msg.linear.x = velocity
+            cmd_msg.angular.z = float(angular_velocity)
             
             # Publish command
             self.cmd_vel_pub.publish(cmd_msg)
@@ -233,25 +314,27 @@ class MPPIControllerNode(Node):
                 # Stop the robot
                 stop_msg = Twist()
                 self.cmd_vel_pub.publish(stop_msg)
-                
+
         except Exception as e:
             self.get_logger().error(f'Control computation failed: {str(e)}')
             # Publish stop command for safety
             stop_msg = Twist()
             self.cmd_vel_pub.publish(stop_msg)
+        end_time = time.time()
+        print(f"[dddd] {round((end_time - start_time)*1000, 2)} ms")
     
     def visualization_callback(self):
         """Visualization processing - low frequency"""
-        if self.last_trajectories is not None and self.last_costs is not None:
+        # Only publish optimal trajectory (skip expensive trajectory markers)
+        if self.last_optimal_trajectory is not None:
             try:
-                # Publish visualizations
-                self._publish_visualizations(
-                    self.last_trajectories, 
-                    self.last_costs, 
-                    self.last_optimal_trajectory
-                )
+                # Publish only optimal path marker
+                optimal_marker = self.trajectory_visualizer.create_optimal_path_marker(self.last_optimal_trajectory)
+                optimal_marker.header.stamp = self.get_clock().now().to_msg()
+                self.optimal_path_pub.publish(optimal_marker)
+                
             except Exception as e:
-                self.get_logger().warn(f'Visualization failed: {str(e)}')
+                self.get_logger().warn(f'Optimal path visualization failed: {str(e)}')
     
     def _store_visualization_data(self, state, action):
         """Store data for visualization processing"""
@@ -267,6 +350,20 @@ class MPPIControllerNode(Node):
             
         except Exception as e:
             self.get_logger().debug(f'Failed to store visualization data: {str(e)}')
+    
+    def _store_optimal_path_only(self, state, action):
+        """Store only optimal path for fast visualization"""
+        try:
+            # Only generate optimal trajectory (no expensive batch rollout)
+            optimal_trajectory = self._create_optimal_trajectory(state, action)
+            
+            # Store for visualization timer
+            self.last_trajectories = None  # Skip expensive trajectory generation
+            self.last_costs = None  
+            self.last_optimal_trajectory = optimal_trajectory
+            
+        except Exception as e:
+            self.get_logger().debug(f'Failed to store optimal path: {str(e)}')
     
     def _create_optimal_trajectory(self, state, action):
         """
@@ -316,16 +413,23 @@ class MPPIControllerNode(Node):
         """
         try:
             # Reset marker ID for each cycle
-            self.visualizer.reset_marker_id()
+            self.trajectory_visualizer.reset_marker_id()
             
             # Publish best trajectories (top 30)
-            trajectory_markers = self.visualizer.create_trajectory_markers(
+            trajectory_markers = self.trajectory_visualizer.create_trajectory_markers(
                 trajectories, costs, num_best=30)
+            
+            # Fix timestamp for all trajectory markers
+            current_time = self.get_clock().now().to_msg()
+            for marker in trajectory_markers.markers:
+                marker.header.stamp = current_time
+            
             self.trajectory_markers_pub.publish(trajectory_markers)
             
             # Publish optimal path
             if optimal_trajectory is not None:
-                optimal_marker = self.visualizer.create_optimal_path_marker(optimal_trajectory)
+                optimal_marker = self.trajectory_visualizer.create_optimal_path_marker(optimal_trajectory)
+                optimal_marker.header.stamp = current_time  # Fix timestamp
                 self.optimal_path_pub.publish(optimal_marker)
                 
         except Exception as e:
