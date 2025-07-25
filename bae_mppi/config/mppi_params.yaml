@@ -1,0 +1,48 @@
+mppi_controller:
+  ros__parameters:
+    # Device settings
+    use_gpu: true
+    
+    # Control settings
+    control_frequency: 10.0  # Hz
+    viz_frequency: 2.0       # Hz (visualization frequency, lower for performance)
+    dt: 0.1  # seconds
+    
+    # MPPI parameters
+    horizon_steps: 20
+    num_samples: 4000
+    lambda_: 1.0
+    sigma: [0.5, 1.0]  # [linear_vel_noise, angular_vel_noise]
+    
+    # Robot constraints
+    max_linear_vel: 1.2   # m/s
+    max_angular_vel: 1.0  # rad/s
+    
+    # Cost function weights
+    obstacle_cost:
+      safety_radius: 0.3   # m
+      max_range: 5.0       # m
+    
+    goal_cost:
+      goal_weight: 1.0
+      angle_weight: 0.5
+    
+    control_cost:
+      linear_weight: 0.1
+      angular_weight: 0.1
+    
+    # Laser processing
+    laser:
+      min_range: 0.1       # m
+      max_range: 5.0       # m
+      angle_increment_filter: 1 
+      cluster_radius: 0.3  # m
+      robot_radius: 0.2    # m
+    
+    footprint:
+      - [0.44792,  0.29250]
+      - [0.44792, -0.29250]
+      - [-0.42408, -0.29250]
+      - [-0.42408,  0.29250]
+    
+    footprint_padding: 0.05
