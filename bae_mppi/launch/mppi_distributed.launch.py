@@ -13,6 +13,7 @@ def generate_launch_description():
     # Get package directory
     bae_mppi_dir = get_package_share_directory('bae_mppi')
     config_file = os.path.join(bae_mppi_dir, 'config', 'mppi_params.yaml')
+    topic_config_file = os.path.join(bae_mppi_dir, 'config', 'topic_config.yaml')
     
     return LaunchDescription([ 
         # Sensor Processing Node
@@ -21,7 +22,7 @@ def generate_launch_description():
             executable='sensor_processor_node.py',
             name='sensor_processor',
             namespace='bae_mppi',
-            parameters=[config_file],
+            parameters=[config_file, topic_config_file],
             output='screen'
         ),
         
@@ -31,7 +32,7 @@ def generate_launch_description():
             executable='mppi_core_node.py',
             name='mppi_core',
             namespace='bae_mppi',
-            parameters=[config_file],
+            parameters=[config_file, topic_config_file],
             output='screen'
         ),
         
@@ -41,7 +42,7 @@ def generate_launch_description():
             executable='visualization_node.py',
             name='mppi_visualization',
             namespace='bae_mppi',
-            parameters=[config_file],
+            parameters=[config_file, topic_config_file],
             output='screen'
         ),
         
@@ -51,7 +52,7 @@ def generate_launch_description():
             executable='steering_validation_node.py',
             name='steering_validation',
             namespace='bae_mppi',
-            parameters=[config_file],
+            parameters=[config_file, topic_config_file],
             output='screen'
         ),
     ])

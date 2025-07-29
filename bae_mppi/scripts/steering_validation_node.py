@@ -22,6 +22,11 @@ class SteeringValidationNode(Node):
     def __init__(self):
         super().__init__('steering_validation')
         
+        # Topic parameters
+        self.declare_parameter('topics.input.cmd_vel_monitor', '/ackermann_like_controller/cmd_vel')
+        self.declare_parameter('topics.input.odometry', '/odom')
+        self.declare_parameter('topics.output.steering_validation', '/steering_validation')
+        
         # Parameters
         self.declare_parameter('wheelbase', 0.65)
         self.declare_parameter('validation_window', 5.0)  # seconds
@@ -30,6 +35,11 @@ class SteeringValidationNode(Node):
         self.wheelbase = self.get_parameter('wheelbase').get_parameter_value().double_value
         self.validation_window = self.get_parameter('validation_window').get_parameter_value().double_value
         self.log_interval = self.get_parameter('log_interval').get_parameter_value().double_value
+        
+        # Get topic names
+        cmd_vel_topic = self.get_parameter('topics.input.cmd_vel_monitor').get_parameter_value().string_value
+        odom_topic = self.get_parameter('topics.input.odometry').get_parameter_value().string_value
+        validation_topic = self.get_parameter('topics.output.steering_validation').get_parameter_value().string_value
         
         # Data storage
         self.cmd_history = deque(maxlen=int(self.validation_window * 20))  # 20Hz assumption
@@ -44,15 +54,15 @@ class SteeringValidationNode(Node):
         
         # Subscribers
         self.cmd_vel_sub = self.create_subscription(
-            Twist, '/ackermann_like_controller/cmd_vel', 
+            Twist, cmd_vel_topic, 
             self.cmd_vel_callback, reliable_qos)
         self.odom_sub = self.create_subscription(
-            Odometry, '/odom', 
+            Odometry, odom_topic, 
             self.odom_callback, reliable_qos)
         
         # Publishers
         self.validation_pub = self.create_publisher(
-            String, '/steering_validation', reliable_qos)
+            String, validation_topic, reliable_qos)
         
         # Validation timer
         self.validation_timer = self.create_timer(

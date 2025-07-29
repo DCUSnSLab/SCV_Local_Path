@@ -30,6 +30,13 @@ class MPPICoreNode(Node):
     def __init__(self):
         super().__init__('mppi_core')
         
+        # Topic parameters
+        self.declare_parameter('topics.input.robot_state', 'state')
+        self.declare_parameter('topics.input.processed_obstacles', 'obstacles')
+        self.declare_parameter('topics.input.goal_pose', '/goal_pose')
+        self.declare_parameter('topics.output.cmd_vel', '/ackermann_like_controller/cmd_vel')
+        self.declare_parameter('topics.output.optimal_path', 'optimal_path')
+        
         # Parameters
         self.declare_parameter('use_gpu', True)
         self.declare_parameter('control_frequency', 10.0)
@@ -114,6 +121,13 @@ class MPPICoreNode(Node):
             u_max=u_max
         )
         
+        # Get topic names
+        state_topic = self.get_parameter('topics.input.robot_state').get_parameter_value().string_value
+        obstacles_topic = self.get_parameter('topics.input.processed_obstacles').get_parameter_value().string_value
+        goal_topic = self.get_parameter('topics.input.goal_pose').get_parameter_value().string_value
+        cmd_vel_topic = self.get_parameter('topics.output.cmd_vel').get_parameter_value().string_value
+        optimal_path_topic = self.get_parameter('topics.output.optimal_path').get_parameter_value().string_value
+        
         # State variables
         self.current_state = None
         self.goal_pose = None
@@ -128,17 +142,17 @@ class MPPICoreNode(Node):
         
         # Subscribers
         self.state_sub = self.create_subscription(
-            MPPIState, 'state', self.state_callback, reliable_qos)
+            MPPIState, state_topic, self.state_callback, reliable_qos)
         self.obstacles_sub = self.create_subscription(
-            ProcessedObstacles, 'obstacles', self.obstacles_callback, reliable_qos)
+            ProcessedObstacles, obstacles_topic, self.obstacles_callback, reliable_qos)
         self.goal_sub = self.create_subscription(
-            PoseStamped, '/goal_pose', self.goal_callback, reliable_qos)
+            PoseStamped, goal_topic, self.goal_callback, reliable_qos)
         
         # Publishers
         self.cmd_vel_pub = self.create_publisher(
-            Twist, '/ackermann_like_controller/cmd_vel', reliable_qos)
+            Twist, cmd_vel_topic, reliable_qos)
         self.optimal_path_pub = self.create_publisher(
-            OptimalPath, 'optimal_path', reliable_qos)
+            OptimalPath, optimal_path_topic, reliable_qos)
         
         # Control timer
         self.control_timer = self.create_timer(

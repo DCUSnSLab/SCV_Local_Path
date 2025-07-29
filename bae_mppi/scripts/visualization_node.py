@@ -29,6 +29,16 @@ class VisualizationNode(Node):
     def __init__(self):
         super().__init__('mppi_visualization')
         
+        # Topic parameters
+        self.declare_parameter('topics.input.optimal_path', 'optimal_path')
+        self.declare_parameter('topics.input.processed_obstacles', 'obstacles')
+        self.declare_parameter('topics.input.goal_pose', '/goal_pose')
+        self.declare_parameter('topics.output.optimal_path_marker', '/mppi_optimal_path')
+        self.declare_parameter('topics.output.best_paths_markers', '/mppi_best_paths')
+        self.declare_parameter('topics.output.nav_path', '/mppi_nav_path')
+        self.declare_parameter('topics.output.goal_marker', '/mppi_goal')
+        self.declare_parameter('topics.output.obstacle_markers', '/mppi_obstacles')
+        
         # Parameters
         self.declare_parameter('viz_frequency', 5.0)
         self.declare_parameter('enable_visualization', True)
@@ -47,6 +57,16 @@ class VisualizationNode(Node):
         # Visualizer
         self.visualizer = MPPIVisualizer(frame_id='odom')
         
+        # Get topic names
+        path_topic = self.get_parameter('topics.input.optimal_path').get_parameter_value().string_value
+        obstacles_topic = self.get_parameter('topics.input.processed_obstacles').get_parameter_value().string_value
+        goal_topic = self.get_parameter('topics.input.goal_pose').get_parameter_value().string_value
+        path_marker_topic = self.get_parameter('topics.output.optimal_path_marker').get_parameter_value().string_value
+        best_paths_topic = self.get_parameter('topics.output.best_paths_markers').get_parameter_value().string_value
+        nav_path_topic = self.get_parameter('topics.output.nav_path').get_parameter_value().string_value
+        goal_marker_topic = self.get_parameter('topics.output.goal_marker').get_parameter_value().string_value
+        obstacle_markers_topic = self.get_parameter('topics.output.obstacle_markers').get_parameter_value().string_value
+        
         # State variables
         self.latest_path = None
         self.latest_goal = None
@@ -61,23 +81,23 @@ class VisualizationNode(Node):
         
         # Subscribers
         self.path_sub = self.create_subscription(
-            OptimalPath, 'optimal_path', self.path_callback, reliable_qos)
+            OptimalPath, path_topic, self.path_callback, reliable_qos)
         self.goal_sub = self.create_subscription(
-            PoseStamped, '/goal_pose', self.goal_callback, reliable_qos)
+            PoseStamped, goal_topic, self.goal_callback, reliable_qos)
         self.obstacles_sub = self.create_subscription(
-            ProcessedObstacles, 'obstacles', self.obstacles_callback, reliable_qos)
+            ProcessedObstacles, obstacles_topic, self.obstacles_callback, reliable_qos)
         
         # Publishers
         self.optimal_path_pub = self.create_publisher(
-            Marker, '/mppi_optimal_path', reliable_qos)
+            Marker, path_marker_topic, reliable_qos)
         self.goal_marker_pub = self.create_publisher(
-            Marker, '/mppi_goal', reliable_qos)
+            Marker, goal_marker_topic, reliable_qos)
         self.obstacle_markers_pub = self.create_publisher(
-            MarkerArray, '/mppi_obstacles', reliable_qos)
+            MarkerArray, obstacle_markers_topic, reliable_qos)
         self.nav_path_pub = self.create_publisher(
-            Path, '/mppi_nav_path', reliable_qos)
+            Path, nav_path_topic, reliable_qos)
         self.best_paths_pub = self.create_publisher(
-            MarkerArray, '/mppi_best_paths', reliable_qos)
+            MarkerArray, best_paths_topic, reliable_qos)
         
         # Visualization timer
         self.viz_timer = self.create_timer(

@@ -34,6 +34,12 @@ class SensorProcessorNode(Node):
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
         
+        # Topic parameters
+        self.declare_parameter('topics.input.laser_scan', '/scan')
+        self.declare_parameter('topics.input.odometry', '/odom')
+        self.declare_parameter('topics.output.processed_obstacles', 'obstacles')
+        self.declare_parameter('topics.output.robot_state', 'state')
+        
         # Parameters
         self.declare_parameter('laser.min_range', 0.1)
         self.declare_parameter('laser.max_range', 100.0)
@@ -45,6 +51,12 @@ class SensorProcessorNode(Node):
         
         self.min_range = min_range
         self.max_range = max_range
+        
+        # Get topic names
+        laser_topic = self.get_parameter('topics.input.laser_scan').get_parameter_value().string_value
+        odom_topic = self.get_parameter('topics.input.odometry').get_parameter_value().string_value
+        obstacles_topic = self.get_parameter('topics.output.processed_obstacles').get_parameter_value().string_value
+        state_topic = self.get_parameter('topics.output.robot_state').get_parameter_value().string_value
         
         # State storage
         self.current_pose = None
@@ -66,15 +78,15 @@ class SensorProcessorNode(Node):
         
         # Subscribers
         self.laser_sub = self.create_subscription(
-            LaserScan, '/scan', self.laser_callback, sensor_qos)
+            LaserScan, laser_topic, self.laser_callback, sensor_qos)
         self.odom_sub = self.create_subscription(
-            Odometry, '/odom', self.odom_callback, sensor_qos)
+            Odometry, odom_topic, self.odom_callback, sensor_qos)
         
         # Publishers
         self.obstacles_pub = self.create_publisher(
-            ProcessedObstacles, 'obstacles', reliable_qos)
+            ProcessedObstacles, obstacles_topic, reliable_qos)
         self.state_pub = self.create_publisher(
-            MPPIState, 'state', reliable_qos)
+            MPPIState, state_topic, reliable_qos)
         
         # Processing timer
         self.processing_timer = self.create_timer(
