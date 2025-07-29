@@ -192,43 +192,51 @@ class ObstacleAvoidanceCost:
         if self.laser_ranges is None or self.laser_angles is None:
             return costs
         
-        # Vectorized computation for all states at once
-        robot_x = state[:, 0:1]  # (K x 1)
-        robot_y = state[:, 1:2]  # (K x 1)  
-        robot_theta = state[:, 2:3]  # (K x 1)
+        # Get global obstacle positions (from current robot pose)
+        if self.robot_pose is None:
+            return costs
+            
+        current_robot_x, current_robot_y, current_robot_theta = self.robot_pose[0], self.robot_pose[1], self.robot_pose[2]
         
-        # Broadcast angles and ranges for all states
-        # laser_angles: (N,), robot_theta: (K x 1) -> world_angles: (K x N)
-        world_angles = self.laser_angles.unsqueeze(0) + robot_theta  # (K x N)
+        # Transform obstacles to global frame using current robot pose
+        global_angles = self.laser_angles + current_robot_theta
+        obs_x_global = current_robot_x + self.laser_ranges * torch.cos(global_angles)  # (N,)
+        obs_y_global = current_robot_y + self.laser_ranges * torch.sin(global_angles)  # (N,)
         
-        # Broadcast ranges for all states: (N,) -> (1 x N) -> (K x N)
-        ranges_broadcast = self.laser_ranges.unsqueeze(0).expand(batch_size, -1)  # (K x N)
+        # Calculate distances from each candidate state to all obstacles
+        candidate_positions = state[:, :2]  # (K x 2)
+        obstacle_positions = torch.stack([obs_x_global, obs_y_global], dim=1)  # (N x 2)
         
-        # Obstacle positions relative to each candidate state: (K x N)
-        obs_x = robot_x + ranges_broadcast * torch.cos(world_angles)
-        obs_y = robot_y + ranges_broadcast * torch.sin(world_angles)
-        
-        # Distance from each candidate position to each obstacle: (K x N)
-        distances = ranges_broadcast  # In robot frame, distance = range
+        # Compute distances: (K x N) - distance from each candidate to each obstacle
+        distances = torch.cdist(candidate_positions, obstacle_positions)
         
         # Find minimum distance for each state: (K,)
         min_distances, _ = torch.min(distances, dim=1)
         
-        # Apply aggressive multi-layer penalty for obstacles
-        # Layer 1: Very close obstacles (immediate danger)
-        very_close_mask = min_distances < self.safety_radius
-        very_close_penalty = torch.exp(-self.exponential_factor * min_distances / self.safety_radius)
-        costs[very_close_mask] = very_close_penalty[very_close_mask] * self.penalty_weight
+        # Apply simpler, more focused obstacle penalty
+        # Only penalize obstacles within safety zone (much smaller range)
+        danger_zone = self.safety_radius * 1.5  # 1.2m instead of 2.4m
         
-        # Layer 2: Moderately close obstacles (warning zone)
-        close_mask = (min_distances >= self.safety_radius) & (min_distances < self.safety_radius * 2.0)
-        close_penalty = torch.exp(-self.exponential_factor * 0.5 * min_distances / self.safety_radius)
-        costs[close_mask] = close_penalty[close_mask] * (self.penalty_weight * 0.5)
+        # Smooth exponential penalty only for close obstacles
+        close_mask = min_distances < danger_zone
+        if torch.any(close_mask):
+            # Smooth penalty that doesn't go to infinity
+            penalty_factor = torch.clamp(danger_zone - min_distances[close_mask], 0, danger_zone) / danger_zone
+            smooth_penalty = penalty_factor ** self.exponential_factor
+            costs[close_mask] = smooth_penalty * self.penalty_weight
         
-        # Layer 3: Distant obstacles (awareness zone)
-        distant_mask = (min_distances >= self.safety_radius * 2.0) & (min_distances < self.safety_radius * 3.0)
-        distant_penalty = torch.exp(-self.exponential_factor * 0.2 * min_distances / self.safety_radius)
-        costs[distant_mask] = distant_penalty[distant_mask] * (self.penalty_weight * 0.1)
+        # Debug information (every 50 calls)
+        if not hasattr(self, '_debug_counter'):
+            self._debug_counter = 0
+        self._debug_counter += 1
+        
+        if self._debug_counter % 50 == 0:
+            if len(min_distances) > 0:
+                max_cost = torch.max(costs)
+                min_dist = torch.min(min_distances)
+                num_obstacles = len(self.laser_ranges) if self.laser_ranges is not None else 0
+                # print(f"[OBSTACLE DEBUG] Min distance: {min_dist:.3f}m, Max cost: {max_cost:.1f}, "
+                #       f"Obstacles: {num_obstacles}, Safety radius: {self.safety_radius:.2f}m")
         
         return costs
     
@@ -329,8 +337,17 @@ class GoalTrackingCost:
         angle_diff = state[:, 2] - self.goal_pose[2]
         angle_error = torch.abs(torch.atan2(torch.sin(angle_diff), torch.cos(angle_diff)))
         
-        # Combine costs
-        costs = self.goal_weight * pos_error + self.angle_weight * angle_error
+        # Forward progress reward - encourage movement toward goal
+        velocity = torch.abs(action[:, 0])
+        goal_direction = self.goal_pose[:2] - state[:, :2]  # [K, 2]
+        goal_distance = torch.norm(goal_direction, dim=1)  # [K]
+        
+        # Only reward forward motion when far from goal
+        far_from_goal = goal_distance > 0.3  # Only when >30cm from goal
+        forward_reward = torch.where(far_from_goal, -5.0 * velocity, torch.zeros_like(velocity))
+        
+        # Combine costs (subtract forward_reward to encourage motion)
+        costs = self.goal_weight * pos_error + self.angle_weight * angle_error + forward_reward
         
         return costs
 
@@ -353,7 +370,7 @@ class ControlEffortCost:
     
     def __call__(self, state, action):
         """
-        Compute control effort cost
+        Compute control effort cost with stopping penalty
         
         Args:
             state (torch.Tensor): Robot states (K x 3)
@@ -365,6 +382,7 @@ class ControlEffortCost:
         linear_cost = self.linear_weight * torch.abs(action[:, 0])
         angular_cost = self.angular_weight * torch.abs(action[:, 1])
         
+        # Remove stopping penalty - let obstacle avoidance handle it
         total_cost = linear_cost + angular_cost
         return total_cost
 

@@ -14,7 +14,7 @@ from builtin_interfaces.msg import Duration
 class MPPIVisualizer:
     """Visualizer for MPPI trajectories and paths"""
     
-    def __init__(self, frame_id='map'):
+    def __init__(self, frame_id='odom'):
         """
         Initialize MPPI visualizer
         

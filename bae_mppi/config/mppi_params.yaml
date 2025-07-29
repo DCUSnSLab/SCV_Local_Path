@@ -3,36 +3,44 @@ mppi_controller:
     # 디바이스 설정
     use_gpu: true                # GPU 사용 여부 (성능 향상)
     
-    # 제어 설정
-    control_frequency: 10.0       # Hz - 제어 주파수 (실시간 성능 고려)
+    # 제어 설정 (log-MPPI 스타일 고빈도 제어)
+    control_frequency: 20.0       # Hz - 제어 주파수 (log-MPPI 수준)
     viz_frequency: 10.0           # Hz - 시각화 주파수 (성능 최적화)
-    dt: 0.1                      # seconds - 시간 간격
+    dt: 0.1                     # seconds - 시간 간격 (더 정밀한 제어)
     
-    # MPPI 알고리즘 파라미터
-    horizon_steps: 100            # 예측 시간 스텝 수
+    # 시각화 설정 (성능 최적화를 위해 끄기 가능)
+    enable_visualization: true    # 전체 시각화 활성화 여부
+    enable_path_viz: true        # 최적 경로 시각화 여부
+    enable_obstacle_viz: true    # 장애물 시각화 여부  
+    enable_goal_viz: true        # 목표 마커 시각화 여부
+    enable_best_paths: true      # cost 낮은 경로들 시각화 여부 (최적 경로 포함)
+    num_best_paths: 10           # 시각화할 최적 경로 개수
+    
+    # MPPI 알고리즘 파라미터 (log-MPPI 수준 효율성)
+    horizon_steps: 50           # 예측 시간 스텝 수 (5초 예측으로 단축)
     num_samples: 5000             # 샘플 궤적 개수 (성능 고려하여 감소)
     lambda_: 1.0                 # 온도 파라미터 (exploration vs exploitation)
-    sigma: [0.8, 0.8]           # [속도_노이즈, 조향각_노이즈] - 탐색 강도
+    sigma: [1.2, 1.0]           # [속도_노이즈, 조향각_노이즈] - 더 다양한 회피 경로 탐색
     
     # 차량 제약 조건 (HUNTER 2.0 Ackermann 모델)
     max_linear_vel: 0.5          # m/s - 최대 직진 속도 (7.2 km/h)
     max_steering_angle: 0.39     # rad (약 22도) - 최대 조향각 (turning radius 1.6m 기준)
     wheelbase: 0.65              # m - 전후축 간 거리 (HUNTER 2.0 실제 스펙)
     
-    # 비용 함수 가중치 설정
+    # 비용 함수 가중치 설정 (log-MPPI 스타일 강력한 회피)
     obstacle_cost:
       safety_radius: 0.8         # m - 안전 반경 (HUNTER 2.0 크기 고려한 장애물과의 최소 거리)
       max_range: 100.0           # m - 레이저 센서 최대 감지 거리
-      penalty_weight: 1000.0     # 장애물 페널티 가중치 (균형잡힌 값)
-      exponential_factor: 3.0    # 지수 페널티 계수 (거리에 따른 가파름)
+      penalty_weight: 10000.0    # 장애물 페널티 가중치 (log-MPPI 수준으로 강화)
+      exponential_factor: 3.0    # 지수 페널티 계수 (급격한 회피)
     
     goal_cost:
-      goal_weight: 0.3           # 목표점 추적 가중치
-      angle_weight: 0.5          # 방향 추적 가중치
+      goal_weight: 50.0          # 목표점 추적 가중치 (전진 보상 포함)
+      angle_weight: 0.3          # 방향 추적 가중치 (감소)
     
     control_cost:
-      linear_weight: 0.5         # 직진 제어 노력 가중치
-      angular_weight: 0.5        # 회전 제어 노력 가중치
+      linear_weight: 0.01        # 직진 제어 노력 가중치 (정지 페널티 추가됨)
+      angular_weight: 0.05       # 회전 제어 노력 가중치 (회피 기동 허용)
     
     # 레이저 스캔 처리 설정
     laser:

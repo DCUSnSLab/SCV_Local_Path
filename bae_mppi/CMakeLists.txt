@@ -1,37 +1,39 @@
 cmake_minimum_required(VERSION 3.8)
 project(bae_mppi)
 
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
-endif()
-
-# find dependencies
+# --- dependencies ---
 find_package(ament_cmake REQUIRED)
-find_package(ament_cmake_python REQUIRED)
-find_package(rclpy REQUIRED)
+find_package(ament_cmake_python REQUIRED)     # <-- 추가
+find_package(rosidl_default_generators REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(tf2_ros REQUIRED)
-find_package(tf2_geometry_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
-# Install Python modules
-ament_python_install_package(${PROJECT_NAME})
+# --- messages ---
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/ProcessedObstacles.msg"
+  "msg/MPPIState.msg"
+  "msg/OptimalPath.msg"
+  "msg/HighCostPath.msg"
+  DEPENDENCIES std_msgs geometry_msgs
+)
 
-# Install Python executables
+# --- Python package 설치 (중복 호출 금지) ---
+ament_python_install_package(bae_mppi_core)  # <-- 이 줄 '한 번만'
+
+# --- executables ---
 install(PROGRAMS
-  scripts/mppi_controller_node.py
+  scripts/sensor_processor_node.py
+  scripts/mppi_core_node.py
+  scripts/visualization_node.py
+  scripts/steering_validation_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# Install launch files
-install(DIRECTORY launch
-  DESTINATION share/${PROJECT_NAME}/
-)
-
-# Install config files
-install(DIRECTORY config
+# --- data ---
+install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}/
 )
 
@@ -40,4 +42,5 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+ament_export_dependencies(rosidl_default_runtime)
 ament_package()
