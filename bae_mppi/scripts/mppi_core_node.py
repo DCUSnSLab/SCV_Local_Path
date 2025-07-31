@@ -20,7 +20,7 @@ from bae_mppi.msg import ProcessedObstacles, MPPIState, OptimalPath, HighCostPat
 
 # Local modules
 from bae_mppi_core.pytorch_mppi import MPPI
-from bae_mppi_core.dynamics import AckermannDynamics
+from bae_mppi_core.dynamics import AckermannDynamics, TwistDynamics
 from bae_mppi_core.cost_functions import CombinedCostFunction
 
 
@@ -46,8 +46,10 @@ class MPPICoreNode(Node):
         self.declare_parameter('sigma', [0.8, 0.8])
         self.declare_parameter('max_linear_vel', 1.5)
         self.declare_parameter('max_steering_angle', 0.39)
+        self.declare_parameter('max_angular_vel', 1.0)  # Added for twist model
         self.declare_parameter('wheelbase', 0.65)
         self.declare_parameter('dt', 0.1)
+        self.declare_parameter('motion_model', 'twist')  # 'ackermann' or 'twist'
         
         # Visualization parameters
         self.declare_parameter('enable_visualization', True)
@@ -76,15 +78,23 @@ class MPPICoreNode(Node):
         sigma = self.get_parameter('sigma').get_parameter_value().double_array_value
         max_linear_vel = self.get_parameter('max_linear_vel').get_parameter_value().double_value
         max_steering_angle = self.get_parameter('max_steering_angle').get_parameter_value().double_value
+        max_angular_vel = self.get_parameter('max_angular_vel').get_parameter_value().double_value
         wheelbase = self.get_parameter('wheelbase').get_parameter_value().double_value
         dt = self.get_parameter('dt').get_parameter_value().double_value
+        self.motion_model = self.get_parameter('motion_model').get_parameter_value().string_value
         
         # Setup device
         self.device = 'cuda' if use_gpu and torch.cuda.is_available() else 'cpu'
         self.get_logger().info(f'Using device: {self.device}')
         
-        # Initialize MPPI components
-        self.dynamics = AckermannDynamics(wheelbase=wheelbase, dt=dt, device=self.device)
+        # Initialize MPPI dynamics based on motion model
+        if self.motion_model == 'twist':
+            self.dynamics = TwistDynamics(dt=dt, device=self.device)
+            self.get_logger().info('Using Twist dynamics model')
+        else:  # 'ackermann'
+            self.dynamics = AckermannDynamics(wheelbase=wheelbase, dt=dt, device=self.device)
+            self.get_logger().info('Using Ackermann dynamics model')
+        
         self.wheelbase = wheelbase
         
         # Cost function with parameters
@@ -100,11 +110,18 @@ class MPPICoreNode(Node):
         self.cost_function.goal_cost.goal_weight = self.get_parameter('goal_cost.goal_weight').get_parameter_value().double_value
         self.cost_function.goal_cost.angle_weight = self.get_parameter('goal_cost.angle_weight').get_parameter_value().double_value
         
-        # Control bounds
+        # Control bounds based on motion model
         nx = 3  # [x, y, theta]
-        nu = 2  # [v, delta]
-        u_min = torch.tensor([-max_linear_vel, -max_steering_angle], device=self.device)
-        u_max = torch.tensor([max_linear_vel, max_steering_angle], device=self.device)
+        nu = 2  # [v, w] or [v, delta]
+        
+        if self.motion_model == 'twist':
+            # Twist model: [vx, wz]
+            u_min = torch.tensor([-max_linear_vel, -max_angular_vel], device=self.device)
+            u_max = torch.tensor([max_linear_vel, max_angular_vel], device=self.device)
+        else:
+            # Ackermann model: [v_rear, delta]
+            u_min = torch.tensor([-max_linear_vel, -max_steering_angle], device=self.device)
+            u_max = torch.tensor([max_linear_vel, max_steering_angle], device=self.device)
         
         # Initialize MPPI
         noise_sigma = torch.diag(torch.tensor(sigma, device=self.device))
@@ -212,23 +229,26 @@ class MPPICoreNode(Node):
             # Compute MPPI control command
             action = self.mppi.command(self.current_state)
             
-            # Extract HUNTER tricycle model outputs
-            # action[0] = rear_wheel_velocity, action[1] = front_steering_angle
-            rear_wheel_velocity = float(action[0])
-            front_steering_angle = float(action[1])
-            
-            # Convert to cmd_vel for HUNTER ackermann_like_controller
-            # cmd_vel.linear.x = rear wheel velocity (direct mapping)
-            # cmd_vel.angular.z = angular velocity from tricycle kinematics
-            if abs(rear_wheel_velocity) > 0.01:
-                angular_velocity = (rear_wheel_velocity / self.wheelbase) * torch.tan(action[1])
-            else:
-                angular_velocity = 0.0
-            
-            # Publish cmd_vel compatible with HUNTER ackermann_like_controller
+            # Create cmd_vel based on motion model
             cmd_msg = Twist()
-            cmd_msg.linear.x = rear_wheel_velocity
-            cmd_msg.angular.z = float(angular_velocity)
+            
+            if self.motion_model == 'twist':
+                # Direct mapping for twist model - NO conversion needed!
+                cmd_msg.linear.x = float(action[0])   # vx
+                cmd_msg.angular.z = float(action[1])  # wz
+            else:
+                # Ackermann model conversion (original logic)
+                rear_wheel_velocity = float(action[0])
+                front_steering_angle = float(action[1])
+                
+                if abs(rear_wheel_velocity) > 0.01:
+                    angular_velocity = (rear_wheel_velocity / self.wheelbase) * torch.tan(action[1])
+                else:
+                    angular_velocity = 0.0
+                    
+                cmd_msg.linear.x = rear_wheel_velocity
+                cmd_msg.angular.z = float(angular_velocity)
+            
             self.cmd_vel_pub.publish(cmd_msg)
             
             # Publish optimal path for visualization (if enabled)
@@ -274,8 +294,13 @@ class MPPICoreNode(Node):
                     path_points.append(point)
                 
                 msg.path_points = path_points
-                msg.current_velocity = float(action[0])  # rear wheel velocity
-                msg.current_steering_angle = float(action[1])  # front steering angle
+                
+                if self.motion_model == 'twist':
+                    msg.current_velocity = float(action[0])  # linear velocity
+                    msg.current_steering_angle = 0.0  # Not applicable for twist model
+                else:
+                    msg.current_velocity = float(action[0])  # rear wheel velocity
+                    msg.current_steering_angle = float(action[1])  # front steering angle
                 
                 # Add best paths if enabled
                 if self.enable_best_paths:

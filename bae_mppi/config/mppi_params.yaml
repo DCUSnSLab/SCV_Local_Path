@@ -16,22 +16,26 @@ mppi_controller:
     enable_best_paths: true      # cost 낮은 경로들 시각화 여부 (최적 경로 포함)
     num_best_paths: 10           # 시각화할 최적 경로 개수
     
+    # 동역학 모델 선택
+    motion_model: 'twist'        # 'twist' 또는 'ackermann' - 조향 오차 해결을 위해 twist 사용
+    
     # MPPI 알고리즘 파라미터 (log-MPPI 수준 효율성)
     horizon_steps: 50           # 예측 시간 스텝 수 (5초 예측으로 단축)
     num_samples: 5000             # 샘플 궤적 개수 (성능 고려하여 감소)
     lambda_: 1.0                 # 온도 파라미터 (exploration vs exploitation)
-    sigma: [1.2, 1.0]           # [속도_노이즈, 조향각_노이즈] - 더 다양한 회피 경로 탐색
+    sigma: [1.2, 1.0]           # [속도_노이즈, 각속도_노이즈] - Twist 모델용 (선속도, 각속도)
     
-    # 차량 제약 조건 (HUNTER 2.0 Ackermann 모델)
-    max_linear_vel: 0.5          # m/s - 최대 직진 속도 (7.2 km/h)
-    max_steering_angle: 0.39     # rad (약 22도) - 최대 조향각 (turning radius 1.6m 기준)
-    wheelbase: 0.65              # m - 전후축 간 거리 (HUNTER 2.0 실제 스펙)
+    # 차량 제약 조건 (Twist 모델)
+    max_linear_vel: 0.5          # m/s - 최대 직진 속도
+    max_angular_vel: 1.0         # rad/s - 최대 각속도 (새로 추가)
+    max_steering_angle: 0.461     # rad (Ackermann 모델용 - 호환성 유지)
+    wheelbase: 0.65              # m - Ackermann 모델용 - 호환성 유지
     
     # 비용 함수 가중치 설정 (log-MPPI 스타일 강력한 회피)
     obstacle_cost:
       safety_radius: 0.8         # m - 안전 반경 (HUNTER 2.0 크기 고려한 장애물과의 최소 거리)
       max_range: 100.0           # m - 레이저 센서 최대 감지 거리
-      penalty_weight: 10000.0    # 장애물 페널티 가중치 (log-MPPI 수준으로 강화)
+      penalty_weight: 100.0    # 장애물 페널티 가중치 (log-MPPI 수준으로 강화)
       exponential_factor: 3.0    # 지수 페널티 계수 (급격한 회피)
     
     goal_cost:
@@ -40,7 +44,7 @@ mppi_controller:
     
     control_cost:
       linear_weight: 0.01        # 직진 제어 노력 가중치 (정지 페널티 추가됨)
-      angular_weight: 0.05       # 회전 제어 노력 가중치 (회피 기동 허용)
+      angular_weight: 0.1       # 회전 제어 노력 가중치 (회피 기동 허용)
     
     # 레이저 스캔 처리 설정
     laser:
