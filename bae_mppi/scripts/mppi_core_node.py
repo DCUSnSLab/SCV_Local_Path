@@ -125,6 +125,22 @@ class MPPICoreNode(Node):
         
         # Initialize MPPI
         noise_sigma = torch.diag(torch.tensor(sigma, device=self.device))
+        
+        # Debug MPPI parameters
+        self.get_logger().info(f"[MPPI INIT] Samples: {num_samples}, Horizon: {horizon_steps}")
+        self.get_logger().info(f"[MPPI INIT] Sigma: {sigma}, Lambda: {lambda_}")
+        u_min_vals = [float(u_min[0]), float(u_min[1])]
+        u_max_vals = [float(u_max[0]), float(u_max[1])]
+        
+        if self.motion_model == 'ackermann':
+            self.get_logger().info(f"[MPPI INIT] Control bounds - Velocity: [{u_min_vals[0]:.2f}, {u_max_vals[0]:.2f}] m/s, Steering: [{u_min_vals[1]:.2f}, {u_max_vals[1]:.2f}] rad")
+            self.get_logger().info(f"[MPPI INIT] Wheelbase: {wheelbase:.2f}m, Max steering: {max_steering_angle:.3f} rad ({max_steering_angle*57.3:.1f}°)")
+        else:
+            self.get_logger().info(f"[MPPI INIT] Control bounds - Linear: [{u_min_vals[0]:.2f}, {u_max_vals[0]:.2f}], Angular: [{u_min_vals[1]:.2f}, {u_max_vals[1]:.2f}]")
+            
+        sigma_diag = [float(noise_sigma[0,0]), float(noise_sigma[1,1])]
+        self.get_logger().info(f"[MPPI INIT] Noise sigma diagonal: [{sigma_diag[0]:.1f}, {sigma_diag[1]:.1f}]")
+        
         self.mppi = MPPI(
             dynamics=self.dynamics,
             running_cost=self.cost_function,
@@ -229,6 +245,42 @@ class MPPICoreNode(Node):
             # Compute MPPI control command
             action = self.mppi.command(self.current_state)
             
+            # Debug sampling diversity every 20 calls
+            if not hasattr(self, '_control_debug_counter'):
+                self._control_debug_counter = 0
+            self._control_debug_counter += 1
+            
+            if self._control_debug_counter % 20 == 0:
+                if hasattr(self.mppi, 'actions') and self.mppi.actions is not None:
+                    try:
+                        # Handle 4D tensor: [rollout, samples, horizon, action_dim]
+                        if len(self.mppi.actions.shape) == 4:
+                            # Take first rollout, calculate std across samples at time step 0
+                            actions_t0 = self.mppi.actions[0, :, 0, :]  # [samples, action_dim]
+                            actions_std = torch.std(actions_t0, dim=0)  # [action_dim]
+                            linear_std = float(actions_std[0])
+                            angular_std = float(actions_std[1])
+                        else:
+                            # Fallback for other shapes
+                            actions_std = torch.std(self.mppi.actions, dim=0)
+                            linear_std = float(torch.mean(actions_std))
+                            angular_std = linear_std
+                            
+                        self.get_logger().info(f"[DEBUG] Actions shape: {self.mppi.actions.shape}")
+                        self.get_logger().info(f"[DEBUG] Actual samples used: {self.mppi.actions.shape[1] if len(self.mppi.actions.shape) > 1 else 'unknown'}")
+                            
+                        action_0 = float(action[0])
+                        action_1 = float(action[1])
+                        
+                        if self.motion_model == 'ackermann':
+                            self.get_logger().info(f"[MPPI SAMPLING] Action diversity - Velocity std: {linear_std:.3f}, Steering std: {angular_std:.3f}")
+                            self.get_logger().info(f"[MPPI OUTPUT] Selected action: Velocity={action_0:.3f} m/s, Steering={action_1:.3f} rad ({action_1*57.3:.1f}°)")
+                        else:
+                            self.get_logger().info(f"[MPPI SAMPLING] Action diversity - Linear std: {linear_std:.3f}, Angular std: {angular_std:.3f}")
+                            self.get_logger().info(f"[MPPI OUTPUT] Selected action: [{action_0:.3f}, {action_1:.3f}]")
+                    except Exception as e:
+                        self.get_logger().warn(f"[DEBUG] Actions debug failed: {e}")
+            
             # Create cmd_vel based on motion model
             cmd_msg = Twist()
             
@@ -255,9 +307,9 @@ class MPPICoreNode(Node):
             if self.enable_visualization and self.enable_path_viz:
                 self.publish_optimal_path(action)
             
-            # Check if goal reached
+            # Check if goal reached (more lenient threshold)
             goal_distance = torch.norm(self.current_state[:2] - torch.tensor(self.goal_pose[:2], device=self.device))
-            if goal_distance < 0.2:
+            if goal_distance < 0.5:  # 20cm → 50cm (more forgiving goal achievement)
                 self.get_logger().info('Goal reached!')
                 stop_msg = Twist()
                 self.cmd_vel_pub.publish(stop_msg)

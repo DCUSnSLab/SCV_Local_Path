@@ -46,7 +46,7 @@ def generate_launch_description():
             output='screen'
         ),
         
-        # Steering Validation Node (optional - for parameter tuning)
+        # Steering Validation Node (enabled for Ackermann model)
         Node(
             package='bae_mppi',
             executable='steering_validation_node.py',
