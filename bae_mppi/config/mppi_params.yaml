@@ -23,10 +23,10 @@
     horizon_steps: 30           # 예측 시간 스텝 수 (5초 예측으로 단축)
     num_samples: 3000           # 샘플 궤적 개수 (성능 고려하여 감소)
     lambda_: 1.0                # 온도 파라미터 (exploration vs exploitation)
-    sigma: [1.0, 0.3]           # [속도_노이즈, 조향각_노이즈] - Ackermann 모델용 (속도, 조향각)
+    sigma: [2.0, 1.0]           # [속도_노이즈, 조향각_노이즈] - Ackermann 모델용 (속도, 조향각)
     
     # 차량 제약 조건 (Ackermann 모델)
-    max_linear_vel: 0.5         # m/s - 최대 후륜 속도
+    max_linear_vel: 1.0         # m/s - 최대 후륜 속도
     max_angular_vel: 3.0        # rad/s - (Twist 호환성용, Ackermann에서는 미사용)
     max_steering_angle: 0.461   # rad - 최대 전륜 조향각 (~26.4도)
     wheelbase: 0.65             # m - 전후륜 축간 거리 (HUNTER 2.0)
