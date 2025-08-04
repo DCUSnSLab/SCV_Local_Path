@@ -7,7 +7,7 @@
     topics:
       input:
         # 센서 데이터
-        laser_scan: '/scan'
+        laser_scan: '/ptl/scan'
         odometry: '/odom'
         goal_pose: '/goal_pose'
         # 제어 명령 모니터링 (steering validation용)

@@ -235,8 +235,17 @@ class ObstacleAvoidanceCost:
                 max_cost = torch.max(costs)
                 min_dist = torch.min(min_distances)
                 num_obstacles = len(self.laser_ranges) if self.laser_ranges is not None else 0
+                
+                # # 상세 디버그 정보
                 # print(f"[OBSTACLE DEBUG] Min distance: {min_dist:.3f}m, Max cost: {max_cost:.1f}, "
                 #       f"Obstacles: {num_obstacles}, Safety radius: {self.safety_radius:.2f}m")
+                # print(f"[DEBUG] Robot pose: [{self.robot_pose[0]:.2f}, {self.robot_pose[1]:.2f}, {self.robot_pose[2]:.2f}]")
+                # print(f"[DEBUG] First 3 candidates: {state[:3, :2]}")
+                # print(f"[DEBUG] Laser min range: {torch.min(self.laser_ranges):.3f}m")
+                # print(f"[DEBUG] Danger zone: {danger_zone:.3f}m")
+                # print(f"[DEBUG] Close obstacles count: {torch.sum(close_mask)}")
+                # if torch.sum(close_mask) > 0:
+                #     print(f"[DEBUG] Close distances: {min_distances[close_mask][:3]}")  # 처음 3개
         
         return costs
     
@@ -337,17 +346,9 @@ class GoalTrackingCost:
         angle_diff = state[:, 2] - self.goal_pose[2]
         angle_error = torch.abs(torch.atan2(torch.sin(angle_diff), torch.cos(angle_diff)))
         
-        # Forward progress reward - encourage movement toward goal
-        velocity = torch.abs(action[:, 0])
-        goal_direction = self.goal_pose[:2] - state[:, :2]  # [K, 2]
-        goal_distance = torch.norm(goal_direction, dim=1)  # [K]
-        
-        # Only reward forward motion when far from goal
-        far_from_goal = goal_distance > 0.3  # Only when >30cm from goal
-        forward_reward = torch.where(far_from_goal, -5.0 * velocity, torch.zeros_like(velocity))
-        
-        # Combine costs (subtract forward_reward to encourage motion)
-        costs = self.goal_weight * pos_error + self.angle_weight * angle_error + forward_reward
+        # Simple goal tracking without forward reward (removed to prevent cliff effects)
+        # The goal_weight provides sufficient attraction to the target
+        costs = self.goal_weight * pos_error + self.angle_weight * angle_error
         
         return costs
 
